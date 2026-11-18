@@ -123,3 +123,39 @@ h1, h2, h3 { font-family: 'Orbitron', 'Inter', sans-serif; margin: 0; letter-spa
 .product-stock { font-size: 0.8rem; color: var(--muted); }
 .product-stock.low { color: #fbbf24; }
 .product-body .btn { margin-top: 10px; width: 100%; }
+
+/* ---------- Links styled as buttons ---------- */
+a.btn { display: inline-flex; align-items: center; text-decoration: none; }
+.brand { text-decoration: none; }
+.nav-user { color: var(--muted); font-size: 0.9rem; align-self: center; }
+.btn:disabled { opacity: 0.5; cursor: not-allowed; box-shadow: none; transform: none; }
+
+/* ---------- Auth pages ---------- */
+.auth-wrap { display: grid; place-items: start center; padding-top: 48px; padding-bottom: 48px; }
+.auth-card {
+  width: 100%; max-width: 420px; display: flex; flex-direction: column; gap: 16px;
+  padding: 28px 22px; border-radius: var(--radius);
+  background: linear-gradient(180deg, var(--surface-2), var(--surface));
+  border: 1px solid var(--border);
+  box-shadow: 0 0 40px rgba(139, 92, 246, 0.12);
+}
+.auth-card h2 { font-size: 1.4rem; }
+.auth-sub { margin: -8px 0 4px; color: var(--muted); }
+
+.field { display: flex; flex-direction: column; gap: 6px; }
+.field label { font-size: 0.85rem; color: var(--muted); }
+.field input {
+  min-height: 46px; padding: 0 14px; border-radius: 10px;
+  background: var(--bg); border: 1px solid var(--border); color: var(--text);
+  font: 400 16px 'Inter', sans-serif; /* 16px stops iOS zooming on focus */
+  outline: none; transition: border-color 0.15s, box-shadow 0.15s;
+}
+.field input:focus { border-color: var(--cyan); box-shadow: 0 0 0 3px rgba(34, 211, 238, 0.18); }
+.field-error { color: var(--bad); font-size: 0.8rem; }
+.form-error {
+  padding: 10px 14px; border-radius: 10px; font-size: 0.9rem;
+  color: var(--bad); background: rgba(248, 113, 113, 0.1); border: 1px solid rgba(248, 113, 113, 0.35);
+}
+.auth-switch { margin: 0; text-align: center; color: var(--muted); font-size: 0.9rem; }
+.auth-switch a { color: var(--cyan); text-decoration: none; }
+.auth-switch a:hover { text-decoration: underline; }
