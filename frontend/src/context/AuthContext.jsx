@@ -1,4 +1,4 @@
-import { createContext, useContext, useState } from 'react';
+import { createContext, useContext, useEffect, useState } from 'react';
 import { api } from '../api/client.js';
 
 const AuthContext = createContext(null);
@@ -20,16 +20,25 @@ export function AuthProvider({ children }) {
     setAuth(data);
   };
 
+  const logout = () => {
+    localStorage.removeItem(KEY);
+    setAuth(null);
+  };
+
   const login = async (email, password) =>
     save(await api('/auth/login', { method: 'POST', body: { email, password } }));
 
   const register = async (name, email, password) =>
     save(await api('/auth/register', { method: 'POST', body: { name, email, password } }));
 
-  const logout = () => {
-    localStorage.removeItem(KEY);
-    setAuth(null);
-  };
+  // On first load, ask the server if the saved token is still valid.
+  useEffect(() => {
+    if (!auth?.token) return;
+    api('/auth/me', { token: auth.token }).catch((err) => {
+      if (err.status === 401) logout();
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const value = { user: auth?.user ?? null, token: auth?.token ?? null, login, register, logout };
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
