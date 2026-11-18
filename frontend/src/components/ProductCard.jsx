@@ -1,21 +1,32 @@
-// Money is stored as integer centavos. Convert only when displaying.
-const peso = (centavos) =>
-  '₱' + (centavos / 100).toLocaleString('en-PH', { minimumFractionDigits: 2 });
+import { Link } from 'react-router-dom';
+import { peso, categoryIcon } from '../utils/format.js';
 
 export default function ProductCard({ product }) {
-  const low = product.stock > 0 && product.stock <= 5;
+  const catName =
+    typeof product.category === 'string' ? product.category : product.category_name;
+  const out = product.stock <= 0;
+
   return (
     <article className="product-card">
-      <div className="product-thumb">{product.icon}</div>
-      <div className="product-body">
-        <span className="product-cat">{product.category}</span>
-        <h3 className="product-name">{product.name}</h3>
-        <span className={`product-stock ${low ? 'low' : ''}`}>
-          {product.stock === 0 ? 'Out of stock' : low ? `Only ${product.stock} left` : 'In stock'}
-        </span>
-        <div className="product-price">{peso(product.price_centavos)}</div>
-        <button className="btn btn-primary" disabled={product.stock === 0}>Add to cart</button>
-      </div>
+      <Link to={`/products/${product.id}`} className="pc-link">
+        <div className="product-thumb">
+          {product.image_url ? (
+            <img src={product.image_url} alt={product.name} loading="lazy" />
+          ) : (
+            <span className="pc-icon">{categoryIcon(catName)}</span>
+          )}
+        </div>
+        <div className="pc-body">
+          {catName && <span className="badge">{catName}</span>}
+          <h3 className="pc-name">{product.name}</h3>
+          <div className="pc-row">
+            <span className="pc-price">{peso(product.price_centavos)}</span>
+            <span className={out ? 'stock out' : 'stock in'}>
+              {out ? 'Out of stock' : 'In stock'}
+            </span>
+          </div>
+        </div>
+      </Link>
     </article>
   );
 }
