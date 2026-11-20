@@ -4,8 +4,10 @@ import Cart from './pages/Cart.jsx';
 import Checkout from './pages/Checkout.jsx';
 import Home from './pages/Home.jsx';
 import Login from './pages/Login.jsx';
+import MockCheckout from './pages/MockCheckout.jsx';
 import OrderDetail from './pages/OrderDetail.jsx';
 import Orders from './pages/Orders.jsx';
+import PaymentReturn from './pages/PaymentReturn.jsx';
 import ProductDetail from './pages/ProductDetail.jsx';
 import Register from './pages/Register.jsx';
 
@@ -13,7 +15,6 @@ export default function App() {
   return (
     <div className="app-shell">
       <Navbar />
-
       <Routes>
         <Route path="/" element={<Home />} />
         <Route path="/products/:id" element={<ProductDetail />} />
@@ -21,9 +22,13 @@ export default function App() {
         <Route path="/checkout" element={<Checkout />} />
         <Route path="/orders" element={<Orders />} />
         <Route path="/orders/:id" element={<OrderDetail />} />
+        <Route path="/payment/success" element={<PaymentReturn variant="success" />} />
+        <Route path="/payment/cancelled" element={<PaymentReturn variant="cancelled" />} />
+        {import.meta.env.DEV && (
+          <Route path="/mock-checkout/:sessionId" element={<MockCheckout />} />
+        )}
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
-
         <Route
           path="*"
           element={
@@ -40,7 +45,6 @@ export default function App() {
           }
         />
       </Routes>
-
       <footer className="site-footer">
         <div className="container">
           <strong>PC PARTS STORE</strong>

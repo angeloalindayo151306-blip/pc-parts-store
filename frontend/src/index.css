@@ -1096,3 +1096,65 @@ a.btn { display: inline-flex; align-items: center; text-decoration: none; }
     justify-content: center;
   }
 }
+
+/* ---------- Step 21D: payment flow ---------- */
+.has-pay-bar { padding-bottom: 104px; }
+
+.pay-bar {
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 40;
+  display: flex; align-items: center; gap: 16px;
+  padding: 12px 16px calc(12px + env(safe-area-inset-bottom));
+  background: rgba(7, 10, 20, 0.94);
+  backdrop-filter: blur(10px);
+  border-top: 1px solid rgba(34, 211, 238, 0.28);
+}
+.pay-bar-total { display: flex; flex-direction: column; line-height: 1.2; }
+.pay-bar-total span { font-size: 0.78rem; color: #94a3b8; }
+.pay-bar-total strong { font-size: 1.15rem; color: var(--cyan, #22d3ee); }
+.pay-bar-button {
+  flex: 1; min-height: 48px; border: 0; border-radius: 12px;
+  font-size: 1rem; font-weight: 700; color: #04121a; cursor: pointer;
+  background: linear-gradient(135deg, var(--cyan, #22d3ee), var(--violet, #8b5cf6));
+}
+.pay-bar-button:disabled { opacity: 0.6; cursor: not-allowed; }
+
+.status-button {
+  width: 100%; min-height: 44px; margin-top: 12px; border-radius: 10px;
+  border: 1px solid rgba(34, 211, 238, 0.4); background: transparent;
+  color: var(--cyan, #22d3ee); font-weight: 600; cursor: pointer;
+}
+.status-button:disabled { opacity: 0.6; cursor: not-allowed; }
+
+.pay-notice {
+  margin: 0 0 16px; padding: 12px 14px; border-radius: 10px;
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  background: rgba(148, 163, 184, 0.1); color: #e2e8f0;
+}
+.pay-notice-good { border-color: rgba(52, 211, 153, 0.5); background: rgba(52, 211, 153, 0.1); }
+.pay-notice-warn { border-color: rgba(251, 191, 36, 0.5); background: rgba(251, 191, 36, 0.1); }
+
+.pay-result, .mock-gateway {
+  max-width: 480px; margin: 24px auto; text-align: center;
+  display: flex; flex-direction: column; align-items: center; gap: 12px;
+}
+.pay-result .co-submit { text-decoration: none; display: inline-flex; align-items: center; justify-content: center; min-height: 48px; }
+.pay-result-icon {
+  width: 64px; height: 64px; border-radius: 50%; display: grid; place-items: center;
+  font-size: 2rem; font-weight: 800; border: 2px solid currentColor;
+}
+.tone-good { color: #34d399; }
+.tone-warn { color: #fbbf24; }
+.tone-wait { color: var(--cyan, #22d3ee); }
+.tone-bad  { color: #f87171; }
+.pay-result-facts { width: 100%; margin: 8px 0; display: grid; gap: 8px; }
+.pay-result-facts div { display: flex; justify-content: space-between; gap: 12px; }
+.pay-result-facts dt { color: #94a3b8; }
+.pay-result-facts dd { margin: 0; font-weight: 600; }
+
+.mock-amount { font-size: 2rem; font-weight: 800; color: var(--cyan, #22d3ee); margin: 0; }
+.mock-actions { width: 100%; display: grid; gap: 10px; margin-top: 8px; }
+.mock-btn { min-height: 48px; border-radius: 12px; border: 0; font-weight: 700; font-size: 1rem; cursor: pointer; }
+.mock-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+.mock-pay { background: #34d399; color: #04130c; }
+.mock-fail { background: #f87171; color: #1a0606; }
+.mock-cancel { background: transparent; color: #cbd5e1; border: 1px solid rgba(148, 163, 184, 0.5); }

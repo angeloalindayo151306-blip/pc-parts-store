@@ -1,51 +1,57 @@
 import { useEffect, useState } from 'react';
 import { Link, Navigate, useParams } from 'react-router-dom';
-import { cancelOrder, getOrder } from '../api/orders.js';
+import { cancelOrder, getOrder, payOrder, reconcileOrder } from '../api/orders.js';
 import { useAuth } from '../context/AuthContext.jsx';
 import { peso } from '../utils/format.js';
+import { friendlyError } from '../utils/errorMessages.js';
 import { STATUS_LABEL } from './Orders.jsx';
 
 function formatDate(value) {
   if (!value) return '—';
-
   return new Intl.DateTimeFormat('en-PH', {
     dateStyle: 'medium',
     timeStyle: 'short',
   }).format(new Date(value));
 }
 
+// Only follow https gateway URLs, or our own site (the dev mock page).
+function safeRedirect(url) {
+  const target = new URL(url, window.location.origin);
+  const sameSite = target.origin === window.location.origin;
+  if (target.protocol !== 'https:' && !sameSite) {
+    throw new Error('The payment link looks unsafe, so it was not opened.');
+  }
+  window.location.href = target.href;
+}
+
 export default function OrderDetail() {
   const { id } = useParams();
   const { token } = useAuth();
-
   const [order, setOrder] = useState(null);
   const [loading, setLoading] = useState(true);
   const [cancelling, setCancelling] = useState(false);
+  const [paying, setPaying] = useState(false);
+  const [checking, setChecking] = useState(false);
   const [error, setError] = useState('');
+  const [notice, setNotice] = useState('');
 
   useEffect(() => {
     let cancelled = false;
-
     if (!token) {
       setLoading(false);
       return;
     }
-
     setLoading(true);
-
     getOrder(token, id)
       .then((data) => {
         if (!cancelled) setOrder(data);
       })
       .catch((err) => {
-        if (!cancelled) {
-          setError(`${err.message}${err.code ? ` (${err.code})` : ''}`);
-        }
+        if (!cancelled) setError(friendlyError(err));
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
       });
-
     return () => {
       cancelled = true;
     };
@@ -56,23 +62,56 @@ export default function OrderDetail() {
   }
 
   async function handleCancel() {
-    const confirmed = window.confirm(
-      'Cancel this unpaid order? Reserved stock will be returned.'
-    );
-
+    const confirmed = window.confirm('Cancel this unpaid order? Reserved stock will be returned.');
     if (!confirmed) return;
-
     setCancelling(true);
     setError('');
-
+    setNotice('');
     try {
       await cancelOrder(token, id);
-      const updated = await getOrder(token, id);
-      setOrder(updated);
+      setOrder(await getOrder(token, id));
     } catch (err) {
-      setError(`${err.message}${err.code ? ` (${err.code})` : ''}`);
+      setError(friendlyError(err));
     } finally {
       setCancelling(false);
+    }
+  }
+
+  async function handlePay() {
+    setPaying(true);
+    setError('');
+    setNotice('');
+    try {
+      const data = await payOrder(token, id);
+      safeRedirect(data.checkoutUrl); // leaves the page; the button stays disabled
+    } catch (err) {
+      setError(friendlyError(err));
+      setPaying(false);
+      if (err.code === 'RESERVATION_EXPIRED' || err.code === 'ORDER_NOT_PAYABLE') {
+        try {
+          setOrder(await getOrder(token, id));
+        } catch {
+          /* keep the error message */
+        }
+      }
+    }
+  }
+
+  // For a webhook that never arrived: the server asks the gateway directly.
+  async function handleCheckStatus() {
+    setChecking(true);
+    setError('');
+    setNotice('');
+    try {
+      const data = await reconcileOrder(token, id);
+      setOrder(data.order);
+      if (data.order.status === 'pending_payment') {
+        setNotice('No payment has been confirmed yet.');
+      }
+    } catch (err) {
+      setError(friendlyError(err));
+    } finally {
+      setChecking(false);
     }
   }
 
@@ -99,9 +138,11 @@ export default function OrderDetail() {
   }
 
   const address = order.shipping_address || {};
+  const unpaid = order.status === 'pending_payment';
+  const isPaid = ['paid', 'processing', 'shipped', 'delivered'].includes(order.status);
 
   return (
-    <main className="container page-shell">
+    <main className={`container page-shell${unpaid ? ' has-pay-bar' : ''}`}>
       <div className="page-heading order-detail-heading">
         <div>
           <Link className="text-link" to="/orders">
@@ -111,13 +152,32 @@ export default function OrderDetail() {
           <h1>#{order.id.slice(0, 8).toUpperCase()}</h1>
           <p>Created {formatDate(order.created_at)}</p>
         </div>
-
         <span className={`ostatus large ostatus-${order.status}`}>
           {STATUS_LABEL[order.status] || order.status}
         </span>
       </div>
 
-      {error && <div className="form-error">{error}</div>}
+      {error && (
+        <div className="form-error" role="alert">
+          {error}
+        </div>
+      )}
+      {notice && (
+        <div className="pay-notice" role="status">
+          {notice}
+        </div>
+      )}
+      {isPaid && (
+        <div className="pay-notice pay-notice-good" role="status">
+          Payment confirmed by the server. Thank you!
+        </div>
+      )}
+      {order.status === 'payment_flagged' && (
+        <div className="pay-notice pay-notice-warn" role="status">
+          Your payment is under review because something did not match. No action is needed from
+          you. {order.flag_reason ? `Reason: ${order.flag_reason}` : ''}
+        </div>
+      )}
 
       <div className="order-detail-grid">
         <div className="order-detail-main">
@@ -129,7 +189,6 @@ export default function OrderDetail() {
                 <p>{order.items?.length || 0} product line(s)</p>
               </div>
             </div>
-
             <div className="detail-items">
               {order.items?.map((item) => (
                 <div className="detail-item" key={item.id || item.product_id}>
@@ -139,9 +198,7 @@ export default function OrderDetail() {
                       {peso(item.unit_price_centavos)} × {item.quantity}
                     </span>
                   </div>
-                  <strong>
-                    {peso(item.unit_price_centavos * item.quantity)}
-                  </strong>
+                  <strong>{peso(item.unit_price_centavos * item.quantity)}</strong>
                 </div>
               ))}
             </div>
@@ -155,7 +212,6 @@ export default function OrderDetail() {
                 <p>Delivery information saved with the order</p>
               </div>
             </div>
-
             <address className="shipping-address">
               <strong>{address.fullName}</strong>
               <span>{address.phone}</span>
@@ -175,7 +231,6 @@ export default function OrderDetail() {
                 <p>Every order status change is recorded.</p>
               </div>
             </div>
-
             <div className="timeline">
               {order.history?.map((entry, index) => (
                 <div className="timeline-item" key={entry.id || index}>
@@ -198,73 +253,84 @@ export default function OrderDetail() {
 
         <aside className="co-card payment-summary">
           <span className="eyebrow">PAYMENT SUMMARY</span>
-
           <div className="summary-lines">
             <div>
               <span>Subtotal</span>
               <strong>{peso(order.subtotal_centavos)}</strong>
             </div>
-
             <div>
               <span>Discount</span>
               <strong>
-                {order.discount_centavos
-                  ? `−${peso(order.discount_centavos)}`
-                  : peso(0)}
+                {order.discount_centavos ? `−${peso(order.discount_centavos)}` : peso(0)}
               </strong>
             </div>
-
             {order.coupon_code && (
               <div>
                 <span>Coupon</span>
                 <strong>{order.coupon_code}</strong>
               </div>
             )}
-
             <div>
               <span>Shipping</span>
-              <strong>
-                {order.shipping_centavos === 0
-                  ? 'FREE'
-                  : peso(order.shipping_centavos)}
-              </strong>
+              <strong>{order.shipping_centavos === 0 ? 'FREE' : peso(order.shipping_centavos)}</strong>
             </div>
-
             <div className="summary-total">
               <span>Total</span>
               <strong>{peso(order.total_centavos)}</strong>
             </div>
           </div>
 
-          {order.status === 'pending_payment' &&
-            order.reservation_expires_at && (
-              <div className="reservation-notice">
-                <span>Stock reserved until</span>
-                <strong>{formatDate(order.reservation_expires_at)}</strong>
-              </div>
-            )}
+          {unpaid && order.reservation_expires_at && (
+            <div className="reservation-notice">
+              <span>Stock reserved until</span>
+              <strong>{formatDate(order.reservation_expires_at)}</strong>
+            </div>
+          )}
 
-          <button className="maya-button" type="button" disabled>
-            Pay with Maya — coming next
-          </button>
-
-          {order.status === 'pending_payment' && (
-            <button
-              className="cancel-order-button"
-              type="button"
-              onClick={handleCancel}
-              disabled={cancelling}
-            >
-              {cancelling ? 'Cancelling…' : 'Cancel unpaid order'}
-            </button>
+          {unpaid && (
+            <>
+              <button
+                className="status-button"
+                type="button"
+                onClick={handleCheckStatus}
+                disabled={checking || paying}
+              >
+                {checking ? 'Checking…' : 'I already paid — check status'}
+              </button>
+              <button
+                className="cancel-order-button"
+                type="button"
+                onClick={handleCancel}
+                disabled={cancelling || paying}
+              >
+                {cancelling ? 'Cancelling…' : 'Cancel unpaid order'}
+              </button>
+            </>
           )}
 
           <p className="summary-disclaimer">
-            A payment redirect will never mark an order as paid. Payment will
-            be confirmed securely by the backend.
+            A payment redirect never marks an order as paid. Payment is confirmed securely by the
+            backend.
           </p>
         </aside>
       </div>
+
+      {unpaid && (
+        <div className="pay-bar">
+          <div className="pay-bar-total">
+            <span>Total</span>
+            <strong>{peso(order.total_centavos)}</strong>
+          </div>
+          <button
+            className="pay-bar-button"
+            type="button"
+            onClick={handlePay}
+            disabled={paying || cancelling}
+          >
+            {paying ? 'Redirecting…' : 'Pay now'}
+          </button>
+        </div>
+      )}
     </main>
   );
 }
