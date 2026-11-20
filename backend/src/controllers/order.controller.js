@@ -2,6 +2,7 @@ import { asyncHandler } from '../utils/asyncHandler.js';
 import { ok } from '../utils/response.js';
 import { AppError } from '../utils/errors.js';
 import * as service from '../services/order.service.js';
+import * as lifecycle from '../services/orderLifecycle.service.js';
 
 const KEY_RE = /^[A-Za-z0-9_-]{8,100}$/;
 
@@ -27,4 +28,8 @@ export const list = asyncHandler(async (req, res) => {
 
 export const getOne = asyncHandler(async (req, res) => {
   ok(res, await service.getOrder(req.user.id, req.params.id));
+});
+
+export const cancel = asyncHandler(async (req, res) => {
+  ok(res, await lifecycle.cancelOrder(req.user.id, req.params.id));
 });
