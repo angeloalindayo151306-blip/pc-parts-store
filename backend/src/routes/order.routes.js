@@ -13,5 +13,6 @@ router.get('/', orders.list);
 router.get('/:id', validate(orderIdParams, 'params'), orders.getOne);
 router.post('/:id/cancel', validate(orderIdParams, 'params'), orders.cancel);
 router.post('/:id/pay', validate(orderIdParams, 'params'), orders.pay);
+router.post('/:id/reconcile', validate(orderIdParams, 'params'), orders.reconcile);
 
 export default router;

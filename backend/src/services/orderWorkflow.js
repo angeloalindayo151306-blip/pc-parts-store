@@ -60,6 +60,13 @@ export async function transition(client, order, to, { actorId = null, note = nul
 // Gives reserved stock back and frees the coupon. Safe to call twice:
 // reservations already released are skipped.
 export async function releaseHold(client, orderId) {
+  // A cancelled or expired order must not keep a live payment session.
+  await client.query(
+    `UPDATE payments SET status = 'expired', updated_at = now()
+     WHERE order_id = $1 AND status = 'pending'`,
+    [orderId]
+  );
+
   await client.query(
     `WITH rel AS (
        UPDATE stock_reservations SET released = true
@@ -71,6 +78,7 @@ export async function releaseHold(client, orderId) {
      WHERE p.id = r.product_id`,
     [orderId]
   );
+
   const red = await client.query(
     'DELETE FROM coupon_redemptions WHERE order_id = $1 RETURNING coupon_id',
     [orderId]

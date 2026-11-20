@@ -7,12 +7,15 @@ import { notFound, errorHandler } from './middleware/errorHandler.js';
 import { AppError } from './utils/errors.js';
 import v1 from './routes/index.js';
 import mockCheckout from './routes/mockCheckout.routes.js';
+import webhookRoutes from './routes/webhook.routes.js';
 
 export const app = express();
 
 app.set('trust proxy', 1); // Render sits behind a proxy
 app.use(requestId);
 app.use(helmet());
+// Payment webhook: needs the RAW body, so it is registered BEFORE express.json.
+app.use('/api/v1/webhooks', webhookRoutes);
 
 // CORS allowlist: no wildcard. Requests with no Origin (curl, Postman) are allowed.
 app.use(

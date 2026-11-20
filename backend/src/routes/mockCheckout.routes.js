@@ -8,7 +8,12 @@ import { getPaymentProvider } from '../services/payments/paymentFactory.js';
 const router = Router();
 
 const sessionParams = z.object({ sessionId: z.string().regex(/^mock_[0-9a-f-]{36}$/) });
-const outcomeBody = z.object({ outcome: z.enum(['paid', 'failed', 'cancelled']) }).strict();
+const outcomeBody = z
+  .object({
+    outcome: z.enum(['paid', 'failed', 'cancelled', 'expired']),
+    amountCentavos: z.number().int().min(0).optional(), // test only: simulate a wrong amount
+  })
+  .strict();
 
 router.get(
   '/:sessionId',
@@ -23,8 +28,10 @@ router.post(
   validate(sessionParams, 'params'),
   validate(outcomeBody),
   asyncHandler(async (req, res) => {
-    getPaymentProvider('mock').simulate(req.params.sessionId, req.body.outcome);
-    ok(res, { sessionId: req.params.sessionId, status: req.body.outcome });
+    const { outcome, amountCentavos } = req.body;
+    const overrides = amountCentavos === undefined ? {} : { amountCentavos };
+    getPaymentProvider('mock').simulate(req.params.sessionId, outcome, overrides);
+    ok(res, { sessionId: req.params.sessionId, status: outcome });
   })
 );
 
