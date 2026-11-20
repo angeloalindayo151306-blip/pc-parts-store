@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom';
 import { peso, categoryIcon } from '../utils/format.js';
+import AddToCartButton from './AddToCartButton.jsx';
 
 export default function ProductCard({ product }) {
   const catName =
@@ -27,6 +28,9 @@ export default function ProductCard({ product }) {
           </div>
         </div>
       </Link>
+      <div className="pc-actions">
+        <AddToCartButton product={product} />
+      </div>
     </article>
   );
 }

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { fetchProduct } from '../api/products.js';
 import { peso, categoryIcon } from '../utils/format.js';
+import AddToCartButton from '../components/AddToCartButton.jsx';
 
 export default function ProductDetail() {
   const { id } = useParams();
@@ -56,9 +57,7 @@ export default function ProductDetail() {
                 {out ? 'Out of stock' : product.stock <= 5 ? `Only ${product.stock} left` : 'In stock'}
               </p>
               {product.description && <p className="detail-desc">{product.description}</p>}
-              <button className="btn btn-primary" disabled>
-                {out ? 'Out of stock' : 'Add to cart (coming soon)'}
-              </button>
+                            <AddToCartButton product={product} />
 
               {Object.keys(specs).length > 0 && (
                 <table className="specs">
