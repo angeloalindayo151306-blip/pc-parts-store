@@ -144,9 +144,15 @@ export default function Cart() {
           {!cart.can_checkout && (
             <p className="form-error">Fix the highlighted items before checking out.</p>
           )}
-          <button className="btn btn-primary" disabled>
-            Checkout (coming soon)
-          </button>
+                    {cart.can_checkout ? (
+            <Link to="/checkout" className="btn btn-primary">
+              Proceed to checkout
+            </Link>
+          ) : (
+            <button className="btn btn-primary" disabled>
+              Resolve cart issues to checkout
+            </button>
+          )}
           <button className="link-btn danger" disabled={busy} onClick={() => act(clear)}>
             Clear cart
           </button>

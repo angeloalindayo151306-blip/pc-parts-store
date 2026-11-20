@@ -53,6 +53,7 @@ export function CartProvider({ children }) {
       updateItem: (productId, quantity) => run(`/cart/items/${productId}`, 'PATCH', { quantity }),
       removeItem: (productId) => run(`/cart/items/${productId}`, 'DELETE'),
       clear: () => run('/cart', 'DELETE'),
+      refresh: () => run('/cart', 'GET'),
     }),
     [cart, loading, run]
   );

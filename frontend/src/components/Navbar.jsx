@@ -1,25 +1,60 @@
-import { Link } from 'react-router-dom';
+import { Link, NavLink } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.jsx';
 import CartLink from './CartLink.jsx';
+
+const navClass = ({ isActive }) =>
+  `site-link${isActive ? ' active' : ''}`;
 
 export default function Navbar() {
   const { user, logout } = useAuth();
 
+  const firstName = user?.name?.trim()?.split(/\s+/)[0] || 'Account';
+
   return (
-    <header className="navbar">
-      <div className="container navbar-inner">
-        <Link className="brand" to="/">PC<span>PARTS</span></Link>
-        <div className="nav-actions">
+    <header className="site-nav">
+      <div className="container site-nav-inner">
+        <Link className="site-brand" to="/">
+          <span className="brand-mark">PC</span>
+          <span>
+            <strong>PARTS</strong>
+            <small>STORE</small>
+          </span>
+        </Link>
+
+        <nav className="site-links" aria-label="Main navigation">
+          <NavLink className={navClass} to="/" end>
+            Store
+          </NavLink>
+
+          {user && (
+            <NavLink className={navClass} to="/orders">
+              Orders
+            </NavLink>
+          )}
+        </nav>
+
+        <div className="site-actions">
           {user ? (
             <>
               <CartLink />
-              <span className="nav-user">Hi, {user.name.split(' ')[0]}</span>
-              <button className="btn" onClick={logout}>Logout</button>
+
+              <span className="user-chip">
+                <span className="user-dot" />
+                {firstName}
+              </span>
+
+              <button className="nav-logout" type="button" onClick={logout}>
+                Log out
+              </button>
             </>
           ) : (
             <>
-              <Link className="btn" to="/login">Login</Link>
-              <Link className="btn btn-primary" to="/register">Sign up</Link>
+              <NavLink className={navClass} to="/login">
+                Log in
+              </NavLink>
+              <Link className="nav-register" to="/register">
+                Create account
+              </Link>
             </>
           )}
         </div>

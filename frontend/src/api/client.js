@@ -1,14 +1,16 @@
 // In production, VITE_API_URL points to Render. In development, the Vite proxy is used.
 const BASE = import.meta.env.VITE_API_URL || '/api/v1';
 
-export async function api(path, { method = 'GET', body, token } = {}) {
+export async function api(path, { method = 'GET', body, token, headers = {} } = {}) {
   let res;
+
   try {
     res = await fetch(`${BASE}${path}`, {
       method,
       headers: {
         ...(body ? { 'Content-Type': 'application/json' } : {}),
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        ...headers,
       },
       body: body ? JSON.stringify(body) : undefined,
     });
@@ -19,6 +21,7 @@ export async function api(path, { method = 'GET', body, token } = {}) {
   }
 
   const json = await res.json().catch(() => null);
+
   if (!res.ok || !json?.success) {
     const err = new Error(json?.error?.message || 'Request failed');
     err.code = json?.error?.code || 'UNKNOWN';
@@ -26,5 +29,6 @@ export async function api(path, { method = 'GET', body, token } = {}) {
     err.details = json?.error?.details;
     throw err;
   }
+
   return json.data;
 }
