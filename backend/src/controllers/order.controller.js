@@ -3,6 +3,7 @@ import { ok } from '../utils/response.js';
 import { AppError } from '../utils/errors.js';
 import * as service from '../services/order.service.js';
 import * as lifecycle from '../services/orderLifecycle.service.js';
+import * as payments from '../services/payment.service.js';
 
 const KEY_RE = /^[A-Za-z0-9_-]{8,100}$/;
 
@@ -32,4 +33,8 @@ export const getOne = asyncHandler(async (req, res) => {
 
 export const cancel = asyncHandler(async (req, res) => {
   ok(res, await lifecycle.cancelOrder(req.user.id, req.params.id));
+});
+
+export const pay = asyncHandler(async (req, res) => {
+  ok(res, await payments.startPayment(req.user.id, req.params.id));
 });

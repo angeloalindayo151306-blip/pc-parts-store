@@ -6,6 +6,7 @@ import { requestId } from './middleware/requestId.js';
 import { notFound, errorHandler } from './middleware/errorHandler.js';
 import { AppError } from './utils/errors.js';
 import v1 from './routes/index.js';
+import mockCheckout from './routes/mockCheckout.routes.js';
 
 export const app = express();
 
@@ -27,6 +28,11 @@ app.use(
 // >>> so it must be registered BEFORE express.json).
 
 app.use(express.json({ limit: '100kb' }));
+
+// Fake gateway API: development and tests only, never in production.
+if (env.payment.provider === 'mock' && env.nodeEnv !== 'production') {
+  app.use('/api/v1/mock-checkout', mockCheckout);
+}
 
 app.use('/api/v1', v1);
 

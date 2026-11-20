@@ -26,7 +26,7 @@ export class MockProvider extends PaymentProvider {
     });
     return {
       sessionId,
-      checkoutUrl: `${this.#baseUrl}/api/v1/mock-checkout/${sessionId}`,
+            checkoutUrl: `${this.#baseUrl}/mock-checkout/${sessionId}`,
       amountCentavos: input.amountCentavos,
       currency: input.currency,
     };
