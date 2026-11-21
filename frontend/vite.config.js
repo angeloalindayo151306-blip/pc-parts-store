@@ -2,6 +2,13 @@ import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import { VitePWA } from 'vite-plugin-pwa';
 
+// Only public catalog GETs are cached at runtime.
+// Everything else (auth, cart, orders, checkout, webhooks, any POST/PATCH/DELETE)
+// never matches and always goes to the network.
+const isCatalogRequest = ({ url, request }) =>
+  request.method === 'GET' &&
+  (url.pathname.startsWith('/api/v1/products') || url.pathname.startsWith('/api/v1/categories'));
+
 export default defineConfig({
   plugins: [
     react(),
@@ -31,6 +38,27 @@ export default defineConfig({
         navigateFallback: '/index.html',
         navigateFallbackDenylist: [/^\/api\//],
         cleanupOutdatedCaches: true,
+        runtimeCaching: [
+          {
+            urlPattern: isCatalogRequest,
+            handler: 'NetworkFirst',
+            options: {
+              cacheName: 'api-catalog',
+              networkTimeoutSeconds: 4,
+              expiration: { maxEntries: 60, maxAgeSeconds: 60 * 60 * 24 },
+              cacheableResponse: { statuses: [200] },
+            },
+          },
+          {
+            urlPattern: ({ request }) => request.destination === 'image',
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'product-images',
+              expiration: { maxEntries: 80, maxAgeSeconds: 60 * 60 * 24 * 30 },
+              cacheableResponse: { statuses: [0, 200] },
+            },
+          },
+        ],
       },
     }),
   ],
