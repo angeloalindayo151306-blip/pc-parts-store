@@ -57,17 +57,16 @@ export default function Cart() {
         <h1 className="page-title">Your cart</h1>
         <div className="empty">
           <p>Your cart is empty.</p>
-          <Link to="/" className="btn btn-primary">Browse parts</Link>
+          <Link to="/products" className="btn btn-primary">Browse parts</Link>
         </div>
       </main>
     );
   }
 
   return (
-    <main className="container cart-page">
+    <main className="container cart-page has-sticky-bar">
       <h1 className="page-title">Your cart</h1>
       {error && <p className="form-error">{error}</p>}
-
       <div className="cart-layout">
         <ul className="cart-list">
           {items.map((i) => (
@@ -79,7 +78,6 @@ export default function Cart() {
                   <span>{categoryIcon(i.category_name)}</span>
                 )}
               </Link>
-
               <div className="cart-info">
                 <Link to={`/products/${i.product_id}`} className="cart-name">{i.name}</Link>
                 <span className="cart-unit">{peso(i.unit_price_centavos)} each</span>
@@ -98,7 +96,6 @@ export default function Cart() {
                   </span>
                 )}
               </div>
-
               <div className="qty">
                 <button
                   aria-label="Decrease quantity"
@@ -116,9 +113,7 @@ export default function Cart() {
                   +
                 </button>
               </div>
-
               <div className="cart-total">{peso(i.line_total_centavos)}</div>
-
               <button
                 className="link-btn danger"
                 disabled={busy}
@@ -129,7 +124,6 @@ export default function Cart() {
             </li>
           ))}
         </ul>
-
         <aside className="cart-summary">
           <h2>Order summary</h2>
           <div className="sum-row">
@@ -144,19 +138,28 @@ export default function Cart() {
           {!cart.can_checkout && (
             <p className="form-error">Fix the highlighted items before checking out.</p>
           )}
-                    {cart.can_checkout ? (
-            <Link to="/checkout" className="btn btn-primary">
-              Proceed to checkout
-            </Link>
-          ) : (
-            <button className="btn btn-primary" disabled>
-              Resolve cart issues to checkout
-            </button>
-          )}
           <button className="link-btn danger" disabled={busy} onClick={() => act(clear)}>
             Clear cart
           </button>
         </aside>
+      </div>
+
+      <div className="sticky-bar">
+        <div className="sticky-bar-info">
+          <span>Subtotal</span>
+          <strong>{peso(cart.subtotal_centavos)}</strong>
+        </div>
+        <div className="sticky-bar-action">
+          {cart.can_checkout ? (
+            <Link to="/checkout" className="btn btn-primary">
+              Checkout
+            </Link>
+          ) : (
+            <button className="btn btn-primary" disabled>
+              Fix cart issues
+            </button>
+          )}
+        </div>
       </div>
     </main>
   );
