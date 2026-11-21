@@ -1,56 +1,36 @@
 import { useEffect, useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import { fetchProducts, fetchCategories } from '../api/products.js';
 import ProductCard from '../components/ProductCard.jsx';
+import { categoryIcon } from '../utils/format.js';
 
 export default function Home() {
-  const [categories, setCategories] = useState([]);
+  const navigate = useNavigate();
   const [q, setQ] = useState('');
-  const [search, setSearch] = useState('');
-  const [category, setCategory] = useState('');
-  const [sort, setSort] = useState('newest');
-  const [inStock, setInStock] = useState(false);
-  const [page, setPage] = useState(1);
-  const [state, setState] = useState({ loading: true, error: '', items: [], meta: null });
+  const [categories, setCategories] = useState([]);
+  const [state, setState] = useState({ loading: true, error: '', items: [] });
 
   useEffect(() => {
     fetchCategories().then(setCategories).catch(() => {});
   }, []);
 
-  // wait 350ms after typing stops before searching
-  useEffect(() => {
-    const t = setTimeout(() => {
-      setSearch(q.trim());
-      setPage(1);
-    }, 350);
-    return () => clearTimeout(t);
-  }, [q]);
-
   useEffect(() => {
     let cancelled = false;
-    setState((s) => ({ ...s, loading: true, error: '' }));
-    fetchProducts({
-      q: search,
-      category,
-      sort,
-      inStock: inStock ? 'true' : '',
-      page,
-      limit: 12,
-    })
-      .then(({ items, meta }) => !cancelled && setState({ loading: false, error: '', items, meta }))
-      .catch((e) =>
-        !cancelled && setState({ loading: false, error: e.message, items: [], meta: null })
-      );
+    fetchProducts({ q: '', category: '', sort: 'newest', inStock: '', page: 1, limit: 6 })
+      .then(({ items }) => !cancelled && setState({ loading: false, error: '', items }))
+      .catch((e) => !cancelled && setState({ loading: false, error: e.message, items: [] }));
     return () => {
       cancelled = true;
     };
-  }, [search, category, sort, inStock, page]);
+  }, []);
 
-  const { loading, error, items, meta } = state;
-
-  function pickCategory(id) {
-    setCategory(id);
-    setPage(1);
+  function onSearch(e) {
+    e.preventDefault();
+    const term = q.trim();
+    navigate(term ? `/products?q=${encodeURIComponent(term)}` : '/products');
   }
+
+  const { loading, error, items } = state;
 
   return (
     <main className="container">
@@ -59,7 +39,7 @@ export default function Home() {
         <p>CPUs, GPUs, RAM and more. Pick parts with confidence.</p>
       </section>
 
-      <div className="toolbar">
+      <form className="home-search" onSubmit={onSearch}>
         <input
           className="search"
           type="search"
@@ -68,76 +48,41 @@ export default function Home() {
           maxLength={100}
           onChange={(e) => setQ(e.target.value)}
         />
-        <select
-          className="select"
-          value={sort}
-          onChange={(e) => {
-            setSort(e.target.value);
-            setPage(1);
-          }}
-        >
-          <option value="newest">Newest</option>
-          <option value="price_asc">Price: low to high</option>
-          <option value="price_desc">Price: high to low</option>
-          <option value="name_asc">Name: A to Z</option>
-        </select>
-        <label className="check">
-          <input
-            type="checkbox"
-            checked={inStock}
-            onChange={(e) => {
-              setInStock(e.target.checked);
-              setPage(1);
-            }}
-          />
-          In stock only
-        </label>
-      </div>
+        <button className="btn" type="submit">Search</button>
+      </form>
 
-      <div className="chips">
-        <button className={'chip' + (category === '' ? ' active' : '')} onClick={() => pickCategory('')}>
-          All
-        </button>
-        {categories.map((c) => (
-          <button
-            key={c.id}
-            className={'chip' + (String(category) === String(c.id) ? ' active' : '')}
-            onClick={() => pickCategory(c.id)}
-          >
-            {c.name} <small>({c.product_count})</small>
-          </button>
-        ))}
-      </div>
+      {categories.length > 0 && (
+        <>
+          <div className="section-head">
+            <h2>Shop by category</h2>
+          </div>
+          <div className="cat-tiles">
+            {categories.map((c) => (
+              <Link key={c.id} to={`/products?category=${c.id}`} className="cat-tile">
+                <span className="cat-icon">{categoryIcon(c.name)}</span>
+                <span className="cat-name">{c.name}</span>
+              </Link>
+            ))}
+          </div>
+        </>
+      )}
 
+      <div className="section-head">
+        <h2>Newest parts</h2>
+        <Link to="/products">View all →</Link>
+      </div>
       {error && <p className="form-error">{error}</p>}
-
-      {loading && items.length === 0 ? (
+      {loading ? (
         <div className="grid">
-          {Array.from({ length: 6 }).map((_, i) => (
+          {Array.from({ length: 4 }).map((_, i) => (
             <div key={i} className="skeleton card-skeleton" />
           ))}
         </div>
-      ) : items.length === 0 && !error ? (
-        <p className="empty">No products match your search.</p>
       ) : (
-        <div className={'grid' + (loading ? ' dim' : '')}>
+        <div className="grid">
           {items.map((p) => (
             <ProductCard key={p.id} product={p} />
           ))}
-        </div>
-      )}
-
-      {meta && meta.totalPages > 1 && (
-        <div className="pagination">
-          <button className="btn" disabled={page <= 1} onClick={() => setPage(page - 1)}>
-            ← Prev
-          </button>
-          <span>
-            Page {meta.page} of {meta.totalPages} · {meta.total} products
-          </span>
-          <button className="btn" disabled={page >= meta.totalPages} onClick={() => setPage(page + 1)}>
-            Next →
-          </button>
         </div>
       )}
     </main>

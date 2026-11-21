@@ -11,6 +11,7 @@ import Orders from './pages/Orders.jsx';
 import PaymentReturn from './pages/PaymentReturn.jsx';
 import ProductDetail from './pages/ProductDetail.jsx';
 import Register from './pages/Register.jsx';
+import Products from './pages/Products.jsx';
 
 export default function App() {
   return (
@@ -20,6 +21,7 @@ export default function App() {
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/products/:id" element={<ProductDetail />} />
+          <Route path="/products" element={<Products />} />
           <Route path="/cart" element={<Cart />} />
           <Route path="/checkout" element={<Checkout />} />
           <Route path="/orders" element={<Orders />} />
