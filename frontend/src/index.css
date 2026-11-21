@@ -1464,3 +1464,85 @@ a.btn { display: inline-flex; align-items: center; text-decoration: none; }
 .sheet-check input { width: 20px; height: 20px; }
 .sheet-actions { display: grid; grid-template-columns: 1fr 2fr; gap: 10px; }
 .sheet-actions .btn { min-height: 44px; display: flex; align-items: center; justify-content: center; }
+/* ===== Step 22D: tap targets, minimum font sizes, overflow guards ===== */
+body { font-size: 16px; }
+.app-frame { overflow-wrap: break-word; }
+.app-frame img { max-width: 100%; }
+
+/* readable text: 14px minimum */
+.app-frame .product-cat,
+.app-frame .product-stock,
+.app-frame .field label,
+.app-frame .field-error,
+.app-frame .stock,
+.app-frame .atc-error,
+.app-frame .cart-unit,
+.app-frame .cart-issue,
+.app-frame .sum-note,
+.app-frame .site-footer .container,
+.app-frame .text-link,
+.app-frame .co-card-heading p,
+.app-frame .co-field > span,
+.app-frame .co-field small,
+.app-frame .form-error,
+.app-frame .coupon-box p,
+.app-frame .summary-disclaimer,
+.app-frame .detail-item strong,
+.app-frame .detail-item span,
+.app-frame .summary-lines > div,
+.app-frame .order-number,
+.app-frame .order-main strong,
+.app-frame .timeline-content strong,
+.app-frame .timeline-content span,
+.app-frame .timeline-content p,
+.app-frame .reservation-notice,
+.app-frame .cancel-order-button,
+.app-frame .pay-bar-total span,
+.app-frame .user-chip,
+.app-frame .pc-price,
+.app-frame .pc-name,
+.app-frame .sticky-bar-info span,
+.app-frame .sticky-bar .atc-error { font-size: 14px; }
+
+/* labels and badges: 12px minimum */
+.app-frame .status,
+.app-frame .badge,
+.app-frame .cart-badge,
+.app-frame .bn-badge,
+.app-frame .ostatus,
+.app-frame .ostatus.large,
+.app-frame .eyebrow,
+.app-frame .top-brand-text small,
+.app-frame .bn-tab,
+.app-frame .filter-count { font-size: 12px; }
+
+/* 44px tap targets */
+.app-frame .btn,
+.app-frame .pc-actions .btn,
+.app-frame .pay-bar-button,
+.app-frame .cancel-order-button,
+.app-frame .top-btn,
+.app-frame .select,
+.app-frame .search,
+.app-frame .chip { min-height: 44px; }
+.app-frame .btn,
+.app-frame .pay-bar-button,
+.app-frame .cancel-order-button,
+.app-frame .top-btn { display: inline-flex; align-items: center; justify-content: center; }
+.app-frame .pc-actions .btn,
+.app-frame .sticky-bar .btn { display: flex; }
+.app-frame .qty button { width: 44px; height: 44px; }
+.app-frame .qty span { min-width: 40px; }
+.app-frame .link-btn { display: inline-flex; align-items: center; min-height: 44px; padding: 0 6px; }
+.app-frame .back-link { display: inline-flex; align-items: center; min-height: 44px; margin: 6px 0; }
+.app-frame .check { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; }
+
+/* no sideways scroll from long content */
+.app-frame .specs { width: 100%; table-layout: fixed; }
+.app-frame .specs th,
+.app-frame .specs td { overflow-wrap: anywhere; word-break: break-word; }
+.app-frame .cart-name,
+.app-frame .order-main strong { overflow-wrap: anywhere; }
+
+/* visible keyboard focus */
+:focus-visible { outline: 2px solid var(--cyan); outline-offset: 2px; }
