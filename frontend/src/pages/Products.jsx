@@ -15,6 +15,11 @@ export default function Products() {
   const [page, setPage] = useState(1);
   const [state, setState] = useState({ loading: true, error: '', items: [], meta: null });
 
+  // bottom sheet: edits are held in a draft until "Show results"
+  const [sheetOpen, setSheetOpen] = useState(false);
+  const [draftSort, setDraftSort] = useState('newest');
+  const [draftInStock, setDraftInStock] = useState(false);
+
   useEffect(() => {
     fetchCategories().then(setCategories).catch(() => {});
   }, []);
@@ -48,50 +53,67 @@ export default function Products() {
     };
   }, [search, category, sort, inStock, page]);
 
+  // while the sheet is open: Esc closes it and the page behind does not scroll
+  useEffect(() => {
+    if (!sheetOpen) return undefined;
+    const onKey = (e) => {
+      if (e.key === 'Escape') setSheetOpen(false);
+    };
+    document.addEventListener('keydown', onKey);
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.removeEventListener('keydown', onKey);
+      document.body.style.overflow = prevOverflow;
+    };
+  }, [sheetOpen]);
+
   const { loading, error, items, meta } = state;
+  const activeFilters = (sort !== 'newest' ? 1 : 0) + (inStock ? 1 : 0);
 
   function pickCategory(id) {
     setCategory(id);
     setPage(1);
   }
 
+  function openSheet() {
+    setDraftSort(sort);
+    setDraftInStock(inStock);
+    setSheetOpen(true);
+  }
+
+  function applySheet() {
+    setSort(draftSort);
+    setInStock(draftInStock);
+    setPage(1);
+    setSheetOpen(false);
+  }
+
+  function resetSheet() {
+    setDraftSort('newest');
+    setDraftInStock(false);
+  }
+
   return (
     <main className="container">
       <h1 className="page-title">All parts</h1>
-      <div className="toolbar">
+
+      <div className="filter-row">
         <input
           className="search"
           type="search"
           placeholder="Search parts, e.g. Ryzen, RTX, DDR5…"
+          aria-label="Search products"
           value={q}
           maxLength={100}
           onChange={(e) => setQ(e.target.value)}
         />
-        <select
-          className="select"
-          value={sort}
-          onChange={(e) => {
-            setSort(e.target.value);
-            setPage(1);
-          }}
-        >
-          <option value="newest">Newest</option>
-          <option value="price_asc">Price: low to high</option>
-          <option value="price_desc">Price: high to low</option>
-          <option value="name_asc">Name: A to Z</option>
-        </select>
-        <label className="check">
-          <input
-            type="checkbox"
-            checked={inStock}
-            onChange={(e) => {
-              setInStock(e.target.checked);
-              setPage(1);
-            }}
-          />
-          In stock only
-        </label>
+        <button type="button" className="filter-btn" onClick={openSheet} aria-haspopup="dialog">
+          <span aria-hidden="true">⚙️</span> Filters
+          {activeFilters > 0 && <span className="filter-count">{activeFilters}</span>}
+        </button>
       </div>
+
       <div className="chips">
         <button className={'chip' + (category === '' ? ' active' : '')} onClick={() => pickCategory('')}>
           All
@@ -106,6 +128,7 @@ export default function Products() {
           </button>
         ))}
       </div>
+
       {error && <p className="form-error">{error}</p>}
       {loading && items.length === 0 ? (
         <div className="grid">
@@ -134,6 +157,45 @@ export default function Products() {
             Next →
           </button>
         </div>
+      )}
+
+      {sheetOpen && (
+        <>
+          <div className="sheet-backdrop" onClick={() => setSheetOpen(false)} />
+          <div className="sheet" role="dialog" aria-modal="true" aria-label="Filters">
+            <div className="sheet-handle" aria-hidden="true" />
+            <div className="sheet-head">
+              <h2>Filters</h2>
+              <button type="button" className="sheet-close" onClick={() => setSheetOpen(false)} aria-label="Close filters">
+                ✕
+              </button>
+            </div>
+
+            <label className="sheet-field">
+              <span>Sort by</span>
+              <select className="select" value={draftSort} onChange={(e) => setDraftSort(e.target.value)}>
+                <option value="newest">Newest</option>
+                <option value="price_asc">Price: low to high</option>
+                <option value="price_desc">Price: high to low</option>
+                <option value="name_asc">Name: A to Z</option>
+              </select>
+            </label>
+
+            <label className="sheet-check">
+              <input
+                type="checkbox"
+                checked={draftInStock}
+                onChange={(e) => setDraftInStock(e.target.checked)}
+              />
+              <span>In stock only</span>
+            </label>
+
+            <div className="sheet-actions">
+              <button type="button" className="btn" onClick={resetSheet}>Reset</button>
+              <button type="button" className="btn btn-primary" onClick={applySheet}>Show results</button>
+            </div>
+          </div>
+        </>
       )}
     </main>
   );
