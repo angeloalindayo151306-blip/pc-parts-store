@@ -2,13 +2,15 @@ import { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { fetchProducts, fetchCategories } from '../api/products.js';
 import ProductCard from '../components/ProductCard.jsx';
+import useDebounce from '../hooks/useDebounce.js';
 
 export default function Products() {
   const [params] = useSearchParams();
   const initialQ = params.get('q') || '';
   const [categories, setCategories] = useState([]);
   const [q, setQ] = useState(initialQ);
-  const [search, setSearch] = useState(initialQ.trim());
+  // wait 350ms after typing stops before searching
+  const search = useDebounce(q.trim(), 350);
   const [category, setCategory] = useState(params.get('category') || '');
   const [sort, setSort] = useState('newest');
   const [inStock, setInStock] = useState(false);
@@ -21,36 +23,38 @@ export default function Products() {
   const [draftInStock, setDraftInStock] = useState(false);
 
   useEffect(() => {
-    fetchCategories().then(setCategories).catch(() => {});
+    const ctrl = new AbortController();
+    fetchCategories(ctrl.signal)
+      .then(setCategories)
+      .catch(() => {});
+    return () => ctrl.abort();
   }, []);
 
-  // wait 350ms after typing stops before searching
+  // a new search always starts from page 1
   useEffect(() => {
-    const t = setTimeout(() => {
-      setSearch(q.trim());
-      setPage(1);
-    }, 350);
-    return () => clearTimeout(t);
-  }, [q]);
+    setPage(1);
+  }, [search]);
 
   useEffect(() => {
-    let cancelled = false;
+    const ctrl = new AbortController();
     setState((s) => ({ ...s, loading: true, error: '' }));
-    fetchProducts({
-      q: search,
-      category,
-      sort,
-      inStock: inStock ? 'true' : '',
-      page,
-      limit: 12,
-    })
-      .then(({ items, meta }) => !cancelled && setState({ loading: false, error: '', items, meta }))
-      .catch((e) =>
-        !cancelled && setState({ loading: false, error: e.message, items: [], meta: null })
-      );
-    return () => {
-      cancelled = true;
-    };
+    fetchProducts(
+      {
+        q: search,
+        category,
+        sort,
+        inStock: inStock ? 'true' : '',
+        page,
+        limit: 12,
+      },
+      ctrl.signal
+    )
+      .then(({ items, meta }) => setState({ loading: false, error: '', items, meta }))
+      .catch((e) => {
+        if (e.name === 'AbortError') return; // replaced by a newer request: not an error
+        setState({ loading: false, error: e.message, items: [], meta: null });
+      });
+    return () => ctrl.abort();
   }, [search, category, sort, inStock, page]);
 
   // while the sheet is open: Esc closes it and the page behind does not scroll
@@ -75,20 +79,17 @@ export default function Products() {
     setCategory(id);
     setPage(1);
   }
-
   function openSheet() {
     setDraftSort(sort);
     setDraftInStock(inStock);
     setSheetOpen(true);
   }
-
   function applySheet() {
     setSort(draftSort);
     setInStock(draftInStock);
     setPage(1);
     setSheetOpen(false);
   }
-
   function resetSheet() {
     setDraftSort('newest');
     setDraftInStock(false);
@@ -130,6 +131,7 @@ export default function Products() {
       </div>
 
       {error && <p className="form-error">{error}</p>}
+
       {loading && items.length === 0 ? (
         <div className="grid">
           {Array.from({ length: 6 }).map((_, i) => (
@@ -145,6 +147,7 @@ export default function Products() {
           ))}
         </div>
       )}
+
       {meta && meta.totalPages > 1 && (
         <div className="pagination">
           <button className="btn" disabled={page <= 1} onClick={() => setPage(page - 1)}>
