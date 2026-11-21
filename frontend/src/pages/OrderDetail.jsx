@@ -2,6 +2,10 @@ import { useEffect, useState } from 'react';
 import { Link, Navigate, useParams } from 'react-router-dom';
 import { cancelOrder, getOrder, payOrder, reconcileOrder } from '../api/orders.js';
 import { useAuth } from '../context/AuthContext.jsx';
+import {
+  OFFLINE_HINT,
+  useNetworkStatus,
+} from '../context/NetworkStatusContext.jsx';
 import { peso } from '../utils/format.js';
 import { friendlyError } from '../utils/errorMessages.js';
 import { STATUS_LABEL } from './Orders.jsx';
@@ -27,6 +31,7 @@ function safeRedirect(url) {
 export default function OrderDetail() {
   const { id } = useParams();
   const { token } = useAuth();
+  const { online } = useNetworkStatus();
   const [order, setOrder] = useState(null);
   const [loading, setLoading] = useState(true);
   const [cancelling, setCancelling] = useState(false);
@@ -62,6 +67,7 @@ export default function OrderDetail() {
   }
 
   async function handleCancel() {
+    if (!online) return;
     const confirmed = window.confirm('Cancel this unpaid order? Reserved stock will be returned.');
     if (!confirmed) return;
     setCancelling(true);
@@ -78,6 +84,7 @@ export default function OrderDetail() {
   }
 
   async function handlePay() {
+    if (!online) return;
     setPaying(true);
     setError('');
     setNotice('');
@@ -99,6 +106,7 @@ export default function OrderDetail() {
 
   // For a webhook that never arrived: the server asks the gateway directly.
   async function handleCheckStatus() {
+    if (!online) return;
     setChecking(true);
     setError('');
     setNotice('');
@@ -140,6 +148,7 @@ export default function OrderDetail() {
   const address = order.shipping_address || {};
   const unpaid = order.status === 'pending_payment';
   const isPaid = ['paid', 'processing', 'shipped', 'delivered'].includes(order.status);
+  const offlineTitle = online ? undefined : OFFLINE_HINT;
 
   return (
     <main className={`container page-shell${unpaid ? ' has-pay-bar' : ''}`}>
@@ -167,6 +176,7 @@ export default function OrderDetail() {
           {notice}
         </div>
       )}
+      {unpaid && !online && <p className="offline-hint">{OFFLINE_HINT}</p>}
       {isPaid && (
         <div className="pay-notice pay-notice-good" role="status">
           Payment confirmed by the server. Thank you!
@@ -293,7 +303,8 @@ export default function OrderDetail() {
                 className="status-button"
                 type="button"
                 onClick={handleCheckStatus}
-                disabled={checking || paying}
+                disabled={checking || paying || !online}
+                title={offlineTitle}
               >
                 {checking ? 'Checking…' : 'I already paid — check status'}
               </button>
@@ -301,7 +312,8 @@ export default function OrderDetail() {
                 className="cancel-order-button"
                 type="button"
                 onClick={handleCancel}
-                disabled={cancelling || paying}
+                disabled={cancelling || paying || !online}
+                title={offlineTitle}
               >
                 {cancelling ? 'Cancelling…' : 'Cancel unpaid order'}
               </button>
@@ -325,7 +337,8 @@ export default function OrderDetail() {
             className="pay-bar-button"
             type="button"
             onClick={handlePay}
-            disabled={paying || cancelling}
+            disabled={paying || cancelling || !online}
+            title={offlineTitle}
           >
             {paying ? 'Redirecting…' : 'Pay now'}
           </button>

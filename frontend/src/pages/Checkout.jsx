@@ -3,6 +3,10 @@ import { Link, Navigate, useNavigate } from 'react-router-dom';
 import { createOrder } from '../api/orders.js';
 import { useAuth } from '../context/AuthContext.jsx';
 import { useCart } from '../context/CartContext.jsx';
+import {
+  OFFLINE_HINT,
+  useNetworkStatus,
+} from '../context/NetworkStatusContext.jsx';
 import { peso } from '../utils/format.js';
 
 const EMPTY_ADDRESS = {
@@ -17,11 +21,10 @@ const EMPTY_ADDRESS = {
 
 export default function Checkout() {
   const { token, user } = useAuth();
+  const { online } = useNetworkStatus();
   const { cart, loading, refresh } = useCart();
   const navigate = useNavigate();
-
   const idempotencyKey = useRef(crypto.randomUUID());
-
   const [address, setAddress] = useState(EMPTY_ADDRESS);
   const [couponCode, setCouponCode] = useState('');
   const [fieldErrors, setFieldErrors] = useState({});
@@ -30,7 +33,6 @@ export default function Checkout() {
 
   useEffect(() => {
     if (!user?.name) return;
-
     setAddress((current) =>
       current.fullName ? current : { ...current, fullName: user.name }
     );
@@ -69,12 +71,10 @@ export default function Checkout() {
 
   function updateAddress(event) {
     const { name, value } = event.target;
-
     setAddress((current) => ({
       ...current,
       [name]: value,
     }));
-
     setFieldErrors((current) => ({
       ...current,
       [name]: undefined,
@@ -83,7 +83,7 @@ export default function Checkout() {
 
   async function handleSubmit(event) {
     event.preventDefault();
-
+    if (!online) return;
     setSubmitting(true);
     setError('');
     setFieldErrors({});
@@ -96,7 +96,6 @@ export default function Checkout() {
       province: address.province.trim(),
       postalCode: address.postalCode.trim(),
     };
-
     if (address.line2.trim()) {
       shippingAddress.line2 = address.line2.trim();
     }
@@ -114,26 +113,20 @@ export default function Checkout() {
         idempotencyKey.current,
         payload
       );
-
       // The backend clears the cart after creating the order.
       await refresh().catch(() => {});
-
       navigate(`/orders/${order.id}`, { replace: true });
     } catch (err) {
       const nextErrors = {};
-
       for (const detail of err.details || []) {
         let field = Array.isArray(detail.field)
           ? detail.field.join('.')
           : String(detail.field || '');
-
         field = field.replace(/^shippingAddress\./, '');
-
         if (Object.hasOwn(EMPTY_ADDRESS, field) || field === 'couponCode') {
           nextErrors[field] = detail.message;
         }
       }
-
       setFieldErrors(nextErrors);
       setError(`${err.message}${err.code ? ` (${err.code})` : ''}`);
     } finally {
@@ -295,10 +288,12 @@ export default function Checkout() {
           <button
             className="co-submit"
             type="submit"
-            disabled={submitting || !cart.can_checkout}
+            disabled={submitting || !cart.can_checkout || !online}
+            title={online ? undefined : OFFLINE_HINT}
           >
             {submitting ? 'Creating order…' : 'Place order securely'}
           </button>
+          {!online && <p className="offline-hint">{OFFLINE_HINT}</p>}
 
           <p className="checkout-note">
             Your price, coupon, stock and shipping fee are recalculated by the

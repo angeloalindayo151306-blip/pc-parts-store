@@ -1,5 +1,6 @@
 import { Link, Route, Routes } from 'react-router-dom';
 import BottomNav from './components/BottomNav.jsx';
+import OfflineBanner from './components/OfflineBanner.jsx';
 import TopBar from './components/TopBar.jsx';
 import Cart from './pages/Cart.jsx';
 import Checkout from './pages/Checkout.jsx';
@@ -18,6 +19,7 @@ export default function App() {
     <div className="app-shell">
       <div className="app-frame">
         <TopBar />
+        <OfflineBanner />
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/products/:id" element={<ProductDetail />} />

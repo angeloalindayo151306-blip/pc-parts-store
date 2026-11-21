@@ -2,6 +2,10 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.jsx';
 import { useCart } from '../context/CartContext.jsx';
+import {
+  OFFLINE_HINT,
+  useNetworkStatus,
+} from '../context/NetworkStatusContext.jsx';
 import { peso, categoryIcon } from '../utils/format.js';
 
 function issueText(i) {
@@ -13,11 +17,17 @@ function issueText(i) {
 
 export default function Cart() {
   const { user } = useAuth();
-  const { cart, loading, updateItem, removeItem, clear } = useCart();
+  const { online } = useNetworkStatus();
+  const { cart, loading, stale, updateItem, removeItem, clear } = useCart();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
 
+  // Editing needs the server, so lock the controls offline.
+  const locked = busy || !online;
+  const offlineTitle = online ? undefined : OFFLINE_HINT;
+
   async function act(fn) {
+    if (!online) return;
     setBusy(true);
     setError('');
     try {
@@ -50,7 +60,6 @@ export default function Cart() {
   }
 
   const items = cart?.items ?? [];
-
   if (items.length === 0) {
     return (
       <main className="container cart-page">
@@ -63,10 +72,19 @@ export default function Cart() {
     );
   }
 
+  const canCheckout = cart.can_checkout && online && !stale;
+
   return (
     <main className="container cart-page has-sticky-bar">
       <h1 className="page-title">Your cart</h1>
       {error && <p className="form-error">{error}</p>}
+      {stale && (
+        <p className="stale-note" role="status">
+          Showing your last saved cart. Prices and stock may have changed. It
+          updates when you are back online.
+        </p>
+      )}
+      {!online && <p className="offline-hint">{OFFLINE_HINT}</p>}
       <div className="cart-layout">
         <ul className="cart-list">
           {items.map((i) => (
@@ -87,7 +105,8 @@ export default function Cart() {
                     {i.issue === 'INSUFFICIENT_STOCK' && (
                       <button
                         className="link-btn"
-                        disabled={busy}
+                        disabled={locked}
+                        title={offlineTitle}
                         onClick={() => act(() => updateItem(i.product_id, i.stock))}
                       >
                         Set to {i.stock}
@@ -99,7 +118,8 @@ export default function Cart() {
               <div className="qty">
                 <button
                   aria-label="Decrease quantity"
-                  disabled={busy || i.quantity <= 1}
+                  disabled={locked || i.quantity <= 1}
+                  title={offlineTitle}
                   onClick={() => act(() => updateItem(i.product_id, i.quantity - 1))}
                 >
                   −
@@ -107,7 +127,8 @@ export default function Cart() {
                 <span>{i.quantity}</span>
                 <button
                   aria-label="Increase quantity"
-                  disabled={busy || i.issue === 'UNAVAILABLE' || i.quantity >= Math.min(i.stock, 99)}
+                  disabled={locked || i.issue === 'UNAVAILABLE' || i.quantity >= Math.min(i.stock, 99)}
+                  title={offlineTitle}
                   onClick={() => act(() => updateItem(i.product_id, i.quantity + 1))}
                 >
                   +
@@ -116,7 +137,8 @@ export default function Cart() {
               <div className="cart-total">{peso(i.line_total_centavos)}</div>
               <button
                 className="link-btn danger"
-                disabled={busy}
+                disabled={locked}
+                title={offlineTitle}
                 onClick={() => act(() => removeItem(i.product_id))}
               >
                 Remove
@@ -138,25 +160,33 @@ export default function Cart() {
           {!cart.can_checkout && (
             <p className="form-error">Fix the highlighted items before checking out.</p>
           )}
-          <button className="link-btn danger" disabled={busy} onClick={() => act(clear)}>
+          <button
+            className="link-btn danger"
+            disabled={locked}
+            title={offlineTitle}
+            onClick={() => act(clear)}
+          >
             Clear cart
           </button>
         </aside>
       </div>
-
       <div className="sticky-bar">
         <div className="sticky-bar-info">
           <span>Subtotal</span>
           <strong>{peso(cart.subtotal_centavos)}</strong>
         </div>
         <div className="sticky-bar-action">
-          {cart.can_checkout ? (
+          {canCheckout ? (
             <Link to="/checkout" className="btn btn-primary">
               Checkout
             </Link>
           ) : (
-            <button className="btn btn-primary" disabled>
-              Fix cart issues
+            <button
+              className="btn btn-primary"
+              disabled
+              title={offlineTitle}
+            >
+              {cart.can_checkout ? 'Checkout' : 'Fix cart issues'}
             </button>
           )}
         </div>

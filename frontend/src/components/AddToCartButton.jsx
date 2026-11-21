@@ -2,10 +2,15 @@ import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.jsx';
 import { useCart } from '../context/CartContext.jsx';
+import {
+  OFFLINE_HINT,
+  useNetworkStatus,
+} from '../context/NetworkStatusContext.jsx';
 
 export default function AddToCartButton({ product }) {
   const { user } = useAuth();
   const { addItem } = useCart();
+  const { online } = useNetworkStatus();
   const navigate = useNavigate();
   const [status, setStatus] = useState('idle'); // idle | busy | added
   const [error, setError] = useState('');
@@ -16,6 +21,7 @@ export default function AddToCartButton({ product }) {
   const out = product.stock <= 0;
 
   async function onClick() {
+    if (!online) return;
     if (!user) {
       navigate('/login');
       return;
@@ -45,11 +51,13 @@ export default function AddToCartButton({ product }) {
       <button
         className="btn btn-primary"
         onClick={onClick}
-        disabled={out || status === 'busy'}
+        disabled={out || status === 'busy' || !online}
+        title={online ? undefined : OFFLINE_HINT}
       >
         {label}
       </button>
-      {error && <span className="atc-error">{error}</span>}
+      {!online && !out && <span className="atc-error">{OFFLINE_HINT}</span>}
+      {online && error && <span className="atc-error">{error}</span>}
     </div>
   );
 }
