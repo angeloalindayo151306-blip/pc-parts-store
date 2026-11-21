@@ -1158,3 +1158,194 @@ a.btn { display: inline-flex; align-items: center; text-decoration: none; }
 .mock-pay { background: #34d399; color: #04130c; }
 .mock-fail { background: #f87171; color: #1a0606; }
 .mock-cancel { background: transparent; color: #cbd5e1; border: 1px solid rgba(148, 163, 184, 0.5); }
+/* ===== Step 22A: mobile-first shell ===== */
+:root {
+  --shell-w: 480px;
+  --bottomnav-h: 60px;
+  --topbar-h: 56px;
+}
+
+.app-frame {
+  position: relative;
+  width: 100%;
+  max-width: var(--shell-w);
+  margin: 0 auto;
+  min-height: 100vh;
+  min-height: 100dvh;
+  overflow-x: clip;
+  padding-bottom: calc(var(--bottomnav-h) + env(safe-area-inset-bottom, 0px));
+}
+
+@media (min-width: 520px) {
+  .app-frame {
+    background: rgba(7, 10, 20, 0.72);
+    border-left: 1px solid rgba(139, 92, 246, 0.25);
+    border-right: 1px solid rgba(139, 92, 246, 0.25);
+    box-shadow: 0 0 60px rgba(34, 211, 238, 0.08);
+  }
+}
+
+/* The shell is 480px wide even on big screens, so force the
+   narrow layouts that used desktop breakpoints. */
+.app-frame .grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+.app-frame .detail { grid-template-columns: 1fr; }
+.app-frame .cart-layout { grid-template-columns: 1fr; }
+.app-frame .cart-summary { position: static; }
+
+/* Top bar */
+.top-bar {
+  position: sticky;
+  top: 0;
+  z-index: 40;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  height: var(--topbar-h);
+  padding: 0 12px;
+  background: rgba(7, 10, 20, 0.88);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid rgba(34, 211, 238, 0.18);
+}
+.top-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+  color: inherit;
+  text-decoration: none;
+}
+.top-brand-text {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.05;
+}
+.top-brand-text strong { letter-spacing: 0.14em; font-size: 0.95rem; }
+.top-brand-text small {
+  letter-spacing: 0.3em;
+  font-size: 0.75rem;
+  color: #22d3ee;
+}
+.top-actions { display: flex; align-items: center; gap: 8px; }
+.top-actions .user-chip {
+  max-width: 90px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.top-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  min-width: 44px;
+  padding: 0 14px;
+  border-radius: 12px;
+  border: 1px solid rgba(34, 211, 238, 0.35);
+  background: rgba(34, 211, 238, 0.08);
+  color: #22d3ee;
+  font: inherit;
+  font-size: 0.9rem;
+  font-weight: 600;
+  text-decoration: none;
+  cursor: pointer;
+}
+.top-btn-primary {
+  background: linear-gradient(90deg, #22d3ee, #8b5cf6);
+  border-color: transparent;
+  color: #07101c;
+}
+
+/* Bottom nav */
+.bottom-nav {
+  position: fixed;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(100%, var(--shell-w));
+  z-index: 50;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  height: calc(var(--bottomnav-h) + env(safe-area-inset-bottom, 0px));
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+  background: rgba(10, 14, 28, 0.96);
+  backdrop-filter: blur(14px);
+  border-top: 1px solid rgba(34, 211, 238, 0.22);
+}
+.bn-tab {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  min-height: 44px;
+  color: #8b95b0;
+  text-decoration: none;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+.bn-tab.active { color: #22d3ee; }
+.bn-tab.active::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 25%;
+  right: 25%;
+  height: 2px;
+  background: linear-gradient(90deg, #22d3ee, #8b5cf6);
+  border-radius: 0 0 4px 4px;
+}
+.bn-icon { position: relative; font-size: 1.35rem; line-height: 1; }
+.bn-badge {
+  position: absolute;
+  top: -6px;
+  right: -14px;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 9px;
+  background: #8b5cf6;
+  color: #fff;
+  font-size: 0.7rem;
+  font-weight: 700;
+  line-height: 18px;
+  text-align: center;
+}
+.bn-tab:focus-visible,
+.top-btn:focus-visible,
+.top-brand:focus-visible {
+  outline: 2px solid #22d3ee;
+  outline-offset: -2px;
+}
+
+/* Pay bar sits above the bottom nav and inside the shell */
+.pay-bar {
+  position: fixed;
+  left: 50%;
+  right: auto;
+  width: min(100%, var(--shell-w));
+  transform: translateX(-50%);
+  bottom: calc(var(--bottomnav-h) + env(safe-area-inset-bottom, 0px));
+  z-index: 45;
+}
+.has-pay-bar {
+  padding-bottom: calc(104px + var(--bottomnav-h) + env(safe-area-inset-bottom, 0px));
+}
+
+/* ===== Step 22A-2: force single-column layouts inside the 480px frame ===== */
+.app-frame .cart-line { grid-template-columns: 64px 1fr auto; }
+.app-frame .checkout-layout { grid-template-columns: minmax(0, 1fr); }
+.app-frame .order-detail-grid { grid-template-columns: minmax(0, 1fr); }
+.app-frame .co-grid { grid-template-columns: minmax(0, 1fr); }
+.app-frame .order-row { grid-template-columns: minmax(0, 1fr); }
+/* ===== Step 22A-3: cart row layout inside the frame ===== */
+.app-frame .cart-line { grid-template-columns: 64px minmax(0, 1fr) auto; }
+.app-frame .cart-line > .cart-thumb { grid-column: 1; grid-row: 1; }
+.app-frame .cart-line > .cart-info  { grid-column: 2 / 4; grid-row: 1; }
+.app-frame .cart-line > .qty        { grid-column: 1 / 3; grid-row: 2; justify-self: start; }
+.app-frame .cart-line > .cart-total { grid-column: 3; grid-row: 2; justify-self: end; }
+.app-frame .cart-line > :last-child { grid-column: 1 / -1; grid-row: 3; justify-self: start; }
