@@ -3,6 +3,7 @@ import { env } from '../config/env.js';
 import { AppError } from '../utils/errors.js';
 import * as repo from '../repositories/ai.repository.js';
 import { buildFallback } from './aiFallback.js';
+import { checkCompatibility } from './compatibility.service.js';
 
 const outputSchema = z.object({
   summary: z.string().min(1).max(600),
@@ -66,7 +67,8 @@ async function callGemini(model, userText) {
 }
 
 // Throws unless the model output is valid JSON in our shape, uses only real
-// in-stock products, has no duplicates and fits the budget. Prices come from the database.
+// in-stock products, has no duplicates, fits the budget and passes the
+// compatibility rules. Prices come from the database.
 function parseAndCheck(text, byId, budgetCentavos) {
   const raw = String(text || '')
     .trim()
@@ -90,8 +92,15 @@ function parseAndCheck(text, byId, budgetCentavos) {
     seen.add(product.id);
     lines.push({ product, reason: it.reason });
   }
+
   const total = lines.reduce((s, l) => s + l.product.price_centavos, 0);
   if (total > budgetCentavos) throw new Error('over_budget');
+
+  const issues = checkCompatibility(lines.map((l) => l.product));
+  if (issues.length > 0) {
+    throw new Error(`incompatible: ${issues.map((i) => i.code).join(',')}`);
+  }
+
   return { summary: parsed.data.summary, lines };
 }
 
@@ -129,6 +138,7 @@ export async function recommendBuild({ budgetPhp, useCase, notes }) {
         specs: p.specs,
       })),
     });
+
     const models = [...new Set([env.ai.model, env.ai.fallbackModel].filter(Boolean))];
     for (const model of models) {
       try {
