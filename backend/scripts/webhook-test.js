@@ -84,8 +84,10 @@ async function startPay(token, order) {
 
 const gateway = (sid, outcome, extra = {}) =>
   call('POST', `/mock-checkout/${sid}/complete`, { body: { outcome, ...extra } });
+
 const hook = (sid, paymentStatus, token = HOOK_TOKEN) =>
   call('POST', `/webhooks/maya/${token}`, { body: { id: sid, paymentStatus } });
+
 const getOrder = async (token, id) => (await call('GET', `/orders/${id}`, { token })).json.data;
 
 // ---------- 1. webhook security ----------
@@ -96,6 +98,7 @@ ok('wrong webhook token: 401');
 await sleep(300);
 assert.equal((await getOrder(t1, o.id)).status, 'pending_payment');
 ok('a rejected webhook changed nothing');
+
 const unknown = await call('POST', `/webhooks/maya/${HOOK_TOKEN}`, { body: { foo: 'bar' } });
 assert.equal(unknown.status, 200);
 assert.equal(unknown.json.data.ignored, true);
@@ -115,6 +118,7 @@ let d = await waitFor(async () => {
 });
 assert.equal(d.history.filter((h) => h.to_status === 'paid').length, 1);
 ok('webhook + server-side verification: order is paid');
+
 await sleep(400);
 const h2 = await hook(sid, 'PAYMENT_SUCCESS');
 assert.equal(h2.status, 200);
@@ -138,20 +142,33 @@ assert.match(d.flag_reason, /amount/);
 ok('amount mismatch: order is payment_flagged, not paid');
 await call('POST', `/orders/${o.id}/cancel`, { token: t1 });
 
-// ---------- 4. failed payment, then retry ----------
+// ---------- 4. failed payment releases stock, retry takes it again (21E) ----------
+const stock0 = await stockOf();
 o = await newOrder(t1);
 sid = await startPay(t1, o);
 const firstUrl = (await call('POST', `/orders/${o.id}/pay`, { token: t1 })).json.data.checkoutUrl;
+if (typeof stock0 === 'number') assert.equal(await stockOf(), stock0 - 1);
 await gateway(sid, 'failed');
 await hook(sid, 'PAYMENT_FAILED');
+if (typeof stock0 === 'number') {
+  await waitFor(async () => (await stockOf()) === stock0);
+}
+assert.equal((await getOrder(t1, o.id)).status, 'pending_payment');
+ok('failed payment: stock is released and the order stays open');
+
 const retry = await waitFor(async () => {
   const r = await call('POST', `/orders/${o.id}/pay`, { token: t1 });
   return r.json?.data?.reused === false ? r : null;
 });
 assert.notEqual(retry.json.data.checkoutUrl, firstUrl);
-assert.equal((await getOrder(t1, o.id)).status, 'pending_payment');
-ok('failed payment: order stays open and a retry creates a new session');
+if (typeof stock0 === 'number') assert.equal(await stockOf(), stock0 - 1);
+ok('retry: Pay now re-reserves the stock and creates a new session');
+
 await call('POST', `/orders/${o.id}/cancel`, { token: t1 });
+if (typeof stock0 === 'number') {
+  await waitFor(async () => (await stockOf()) === stock0);
+}
+ok('cancel after retry: stock is back to the starting value');
 
 // ---------- 5. expired payment releases stock ----------
 const before = await stockOf();
@@ -169,11 +186,13 @@ sid = await startPay(t1, o);
 await gateway(sid, 'paid');
 assert.equal((await call('POST', `/orders/${o.id}/reconcile`, { token: t2 })).status, 404);
 ok("another user cannot reconcile someone else's order (404)");
+
 const rec = await call('POST', `/orders/${o.id}/reconcile`, { token: t1 });
 assert.equal(rec.status, 200);
 assert.equal(rec.json.data.order.status, 'paid');
 assert.deepEqual(rec.json.data.results, ['paid']);
 ok('reconcile without any webhook: order is paid');
+
 const rec2 = await call('POST', `/orders/${o.id}/reconcile`, { token: t1 });
 assert.equal(rec2.json.data.order.status, 'paid');
 ok('reconcile twice is harmless');
@@ -190,5 +209,3 @@ d = await waitFor(async () => {
 });
 assert.equal(d.status, 'cancelled');
 ok('payment after cancel: order stays cancelled and is flagged for refund');
-
-console.log(`\nAll ${n} checks passed`);

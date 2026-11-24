@@ -1,7 +1,7 @@
 import { env } from '../config/env.js';
 import { AppError } from '../utils/errors.js';
 import { withTransaction } from '../utils/transaction.js';
-import { lockOrder } from './orderWorkflow.js';
+import { lockOrder, reservationState, reserveOrderStock } from './orderWorkflow.js';
 import { getPaymentProvider } from './payments/paymentFactory.js';
 import * as repo from '../repositories/payment.repository.js';
 
@@ -22,12 +22,26 @@ export async function startPayment(userId, orderId) {
         status: locked.status,
       });
     }
-    if (!(await repo.reservationActive(client, orderId))) {
+
+    const hold = await reservationState(client, orderId);
+    if (hold === 'lapsed') {
       throw new AppError(
         409,
         'RESERVATION_EXPIRED',
         'The stock hold for this order has expired. Please place the order again.'
       );
+    }
+    if (hold === 'none') {
+      // The hold was given back after a failed payment. Take it again, all or nothing.
+      const taken = await reserveOrderStock(client, orderId);
+      if (!taken.ok) {
+        throw new AppError(
+          409,
+          'INSUFFICIENT_STOCK',
+          `${taken.productName} is no longer available in the quantity you ordered.`,
+          { product: taken.productName }
+        );
+      }
     }
 
     const pending = await repo.findPendingPayment(client, orderId);

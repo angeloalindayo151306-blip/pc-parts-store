@@ -1,7 +1,14 @@
 import { pool } from '../config/db.js';
 import { AppError } from '../utils/errors.js';
 import { withTransaction } from '../utils/transaction.js';
-import { lockOrder, transition, releaseHold } from './orderWorkflow.js';
+import {
+  lockOrder,
+  transition,
+  releaseHold,
+  releaseStock,
+  reservationState,
+  reserveOrderStock,
+} from './orderWorkflow.js';
 import { getPaymentProvider } from './payments/paymentFactory.js';
 import * as repo from '../repositories/payment.repository.js';
 import * as orderRepo from '../repositories/order.repository.js';
@@ -46,6 +53,19 @@ export async function settlePayment({ providerName, sessionId, source }) {
         problems.push(`money arrived but the order was already ${order.status}`);
       }
 
+      // A payment that failed earlier had its stock released. If money still arrives,
+      // take the stock again now. If it is gone, a person must decide (refund or restock).
+      if (problems.length === 0 && order.status === 'pending_payment') {
+        if ((await reservationState(client, order.id)) === 'none') {
+          const taken = await reserveOrderStock(client, order.id);
+          if (!taken.ok) {
+            problems.push(
+              `paid after the stock hold was released and ${taken.productName} is no longer available`
+            );
+          }
+        }
+      }
+
       if (problems.length > 0) {
         // Flag for a human. Never mark paid when anything looks wrong.
         const reason = `Payment ${sessionId}: ${problems.join('; ')}`;
@@ -84,9 +104,15 @@ export async function settlePayment({ providerName, sessionId, source }) {
       return { result: 'expired', orderStatus };
     }
 
-    // failed or cancelled: the payment attempt is over, the order stays open for a retry.
+    // failed or cancelled: the payment attempt is over and the order stays open for a retry.
+    // The stock goes back on the shelf (unless another session is still pending);
+    // the next "Pay now" takes it again, or fails with a clear stock error.
     // (The payments table has no 'cancelled' value, so both are stored as 'failed'.)
     await repo.setPaymentStatus(client, payment.id, 'failed');
+    if (order.status === 'pending_payment') {
+      const other = await repo.findPendingPayment(client, order.id);
+      if (!other) await releaseStock(client, order.id);
+    }
     return { result: info.status, orderStatus: order.status };
   });
 }
