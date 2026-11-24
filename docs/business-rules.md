@@ -51,7 +51,7 @@ Seeded coupons:
 | BR-21 | An out-of-stock product cannot be added. | 409 `OUT_OF_STOCK` |
 | BR-22 | A quantity above the available stock is refused. | 409 `INSUFFICIENT_STOCK` |
 | BR-23 | An unknown product is refused. | 404 `PRODUCT_NOT_FOUND` |
-| BR-24 | An inactive (hidden) product cannot be added or updated. | 409 `PRODUCT_UNAVAILABLE` |
+| BR-24 | An inactive (hidden) product cannot be added, and looks like a missing product. If a product is hidden after it was added, changing its quantity is refused. | 404 `PRODUCT_NOT_FOUND` on add / 409 `PRODUCT_UNAVAILABLE` on update |
 | BR-25 | Changing or removing a line that is not in the cart is refused. | 404 `CART_ITEM_NOT_FOUND` |
 
 ## 4. Checkout and stock reservation
