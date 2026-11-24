@@ -16,6 +16,7 @@ const PaymentReturn = lazy(() => import('./pages/PaymentReturn.jsx'));
 const MockCheckout = lazy(() => import('./pages/MockCheckout.jsx'));
 const Login = lazy(() => import('./pages/Login.jsx'));
 const Register = lazy(() => import('./pages/Register.jsx'));
+const AiAssistant = lazy(() => import('./pages/AiAssistant.jsx'));
 
 function PageFallback() {
   return (
@@ -36,6 +37,7 @@ export default function App() {
             <Route path="/" element={<Home />} />
             <Route path="/products/:id" element={<ProductDetail />} />
             <Route path="/products" element={<Products />} />
+            <Route path="/ai-assistant" element={<AiAssistant />} />
             <Route path="/cart" element={<Cart />} />
             <Route path="/payment/success" element={<PaymentReturn variant="success" />} />
             <Route path="/payment/cancelled" element={<PaymentReturn variant="cancelled" />} />

@@ -8,6 +8,7 @@ export default function BottomNav() {
   const { user } = useAuth();
   const { count } = useCart();
   const { pathname } = useLocation();
+
   // Store tab covers the landing page, the catalog and product details
   const storeActive = pathname === '/' || pathname.startsWith('/products');
 
@@ -21,6 +22,12 @@ export default function BottomNav() {
         <span className="bn-icon" aria-hidden="true">🏠</span>
         <span className="bn-label">Store</span>
       </Link>
+
+      <NavLink className={tabClass} to="/ai-assistant" aria-label="Build assistant">
+        <span className="bn-icon" aria-hidden="true">🤖</span>
+        <span className="bn-label">Build</span>
+      </NavLink>
+
       <NavLink className={tabClass} to="/cart" aria-label={`Cart, ${count} items`}>
         <span className="bn-icon" aria-hidden="true">
           🛒
@@ -28,6 +35,7 @@ export default function BottomNav() {
         </span>
         <span className="bn-label">Cart</span>
       </NavLink>
+
       {user ? (
         <NavLink className={tabClass} to="/orders">
           <span className="bn-icon" aria-hidden="true">📦</span>
