@@ -7,6 +7,7 @@ function required(name) {
 }
 
 const stripSlash = (s) => (s || '').replace(/\/+$/, '');
+
 const port = Number(process.env.PORT) || 4000;
 
 export const env = Object.freeze({
@@ -29,5 +30,11 @@ export const env = Object.freeze({
       publicKey: process.env.MAYA_PUBLIC_KEY || '',
       secretKey: process.env.MAYA_SECRET_KEY || '',
     }),
+  }),
+  ai: Object.freeze({
+    apiKey: process.env.GEMINI_API_KEY || '',
+    model: process.env.GEMINI_MODEL || 'gemini-3.5-flash',
+    fallbackModel: process.env.GEMINI_FALLBACK_MODEL || 'gemini-3.1-flash-lite',
+    timeoutMs: Number(process.env.GEMINI_TIMEOUT_MS) || 15000,
   }),
 });
