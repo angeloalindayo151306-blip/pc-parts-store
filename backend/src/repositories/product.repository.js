@@ -13,7 +13,11 @@ const escapeLike = (s) => s.replace(/[\\%_]/g, '\\$&');
 
 const COLUMNS = `
   p.id, p.name, p.description, p.price_centavos, p.stock, p.image_url, p.specs,
-  c.id as category_id, c.name as category`;
+  c.id as category_id, c.name as category,
+  (select round(avg(r.rating)::numeric, 1)::float
+     from product_reviews r where r.product_id = p.id) as average_rating,
+  (select count(*)::int
+     from product_reviews r where r.product_id = p.id) as review_count`;
 
 export async function list({ q, category, minPrice, maxPrice, inStock, sort, page, limit }) {
   const where = ['p.is_active = true'];
