@@ -37,6 +37,7 @@ export class MayaProvider extends PaymentProvider {
     }
 
     const [firstName, ...rest] = (input.buyer.name || 'Customer').trim().split(/\s+/);
+
     return {
       totalAmount: {
         value: toPesos(amountCentavos),
@@ -88,7 +89,7 @@ export class MayaProvider extends PaymentProvider {
     return {
       sessionId: res.id || sessionId,
       status: MayaProvider.#mapStatus(res.paymentStatus),
-      amountCentavos: toCentavos(res.totalAmount?.value),
+      amountCentavos: MayaProvider.#readAmount(res),
       currency: res.totalAmount?.currency || null,
       reference: res.requestReferenceNumber || null,
     };
@@ -103,6 +104,18 @@ export class MayaProvider extends PaymentProvider {
       eventType: String(payload.paymentStatus),
       sessionId: String(payload.id),
     };
+  }
+
+  /**
+   * Maya's GET response puts the total at totalAmount.amount (a string like "2100").
+   * Returns centavos, or null when no usable number is found, so settlement
+   * flags the payment instead of comparing against NaN.
+   */
+  static #readAmount(res) {
+    const raw = res?.totalAmount?.amount ?? res?.totalAmount?.value;
+    if (raw === undefined || raw === null || raw === '') return null;
+    const n = Number(raw);
+    return Number.isFinite(n) ? toCentavos(n) : null;
   }
 
   /** Strict mapping: only an exact PAYMENT_SUCCESS is 'paid'. Unknown values stay 'pending'. */
@@ -139,6 +152,8 @@ export class MayaProvider extends PaymentProvider {
         throw new AppError(502, 'PAYMENT_GATEWAY_ERROR', 'Payment gateway rejected the request', {
           gatewayStatus: res.status,
           gatewayCode: json?.code || null,
+          gatewayMessage: json?.message || null,
+          gatewayParameters: json?.parameters || null,
         });
       }
       return json;
