@@ -31,7 +31,7 @@ flowchart LR
     api -->|"SQL, pooled connection"| db
     api -->|"create and check checkout"| maya
     api -->|"recommend build"| gemini
-    maya -->|"payment event"| hook
+    maya -.->|"payment event, not registered"| hook
     hook --> db
     job --> db
     ui -->|"redirect to pay"| maya
@@ -41,8 +41,8 @@ flowchart LR
 Reading the diagram:
 
 - The browser only talks to the API. It never talks to the database, and it holds no secret keys.
-- Maya is contacted in two ways. The customer's browser is redirected to Maya's page to pay. The server calls Maya to create the checkout and to double-check the result. Maya also calls the webhook.
-- If the webhook never arrives, the customer's return to the site triggers `POST /orders/{id}/reconcile`, which asks Maya directly. See `docs/payment-integration.md`.
+- Maya is contacted in two ways. The customer's browser is redirected to Maya's page to pay. The server calls Maya to create the checkout and to double-check the result. The webhook endpoint is built and tested with the mock provider, but it is not registered with Maya (see `docs/payment-integration.md`), so Maya does not call it today.
+- Because no webhook is registered, the customer's return to the site is what settles a payment: it triggers `POST /orders/{id}/reconcile`, which asks Maya directly. The same path covers a webhook that is registered but never arrives. See `docs/payment-integration.md`.
 - Gemini is called only from the server, so the API key never reaches the browser.
 
 ## Backend layers
@@ -123,7 +123,7 @@ Routing uses `react-router`. `ProtectedRoute` sends signed-in-only pages (cart, 
 | CORS allowlist, no wildcard | `app.js` |
 | Rate limits on auth, AI, compatibility and review writes | `routes/*.routes.js` |
 | Values are passed as `$n` parameters. Dynamic SQL is limited to whitelisted sort keys and fixed fragments | `repositories/`, and the few services that run SQL |
-| Webhook protected by a secret token in the URL, and the body is never trusted (the payment is re-fetched from Maya) | `webhook.routes.js`, `paymentSettlement.service.js` |
+| Webhook protected by a secret token in the URL, and the body is never trusted (the payment is re-fetched from Maya). The endpoint is not registered with Maya at the moment. | `webhook.routes.js`, `paymentSettlement.service.js` |
 | Prompt-injection resistance: notes are untrusted data, and every product id Gemini returns is checked against the database | `ai.service.js` |
 | Secrets only in environment variables, loaded once into a frozen object | `config/env.js` |
 
@@ -151,7 +151,7 @@ Every response uses the same envelope. Each request gets an id (`middleware/requ
 | API | Render web service, root directory `backend` | Deploys on every push to `main`. Health check at `/api/v1/health`. The free instance sleeps when idle. `trust proxy` is set because Render sits behind a proxy. |
 | Database | Supabase PostgreSQL | Connected through the pooler. |
 | Frontend | Netlify | Planned. Not deployed yet. |
-| Payments | Maya sandbox | Test cards only. No real money. |
+| Payments | Maya sandbox | Test cards only. No real money. The webhook is not registered, so payments settle through reconcile. |
 | AI | Google Gemini | Key held only on the server. If Gemini fails, a keyword fallback answers. |
 
 ## Why it is built this way
