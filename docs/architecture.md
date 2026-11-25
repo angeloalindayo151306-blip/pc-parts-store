@@ -134,7 +134,7 @@ Every response uses the same envelope. Each request gets an id (`middleware/requ
 
 ### Background job
 
-`jobs/expiry.job.js` is the expiry sweep. It finds unpaid orders whose stock hold has lapsed, expires them and gives the stock back, so abandoned checkouts do not lock stock forever.
+`jobs/expiry.job.js` is the expiry sweep. Every 60 seconds it expires two kinds of unpaid order: those whose stock hold has lapsed, and those whose payment failed and that sat idle for 30 minutes with no active hold. Expired orders give their stock back, so abandoned checkouts do not lock stock forever.
 
 ### Concurrency
 
