@@ -121,6 +121,8 @@ The limit is tight on purpose, because every request can call a paid AI API.
 | `GEMINI_FALLBACK_MODEL` | `gemini-3.1-flash-lite` | Tried second. |
 | `GEMINI_TIMEOUT_MS` | `15000` | Per-model time limit. |
 
+The table shows the code defaults. On Render, and in the local `.env`, the values are `GEMINI_MODEL=gemini-3.1-flash-lite`, `GEMINI_FALLBACK_MODEL=gemini-3.5-flash` and `GEMINI_TIMEOUT_MS=20000`.
+
 ## Compatibility checker endpoint
 
 `POST /api/v1/compatibility/check` takes a list of product ids and runs the same rules (`services/buildCheck.service.js`). It removes duplicate ids, looks the products up, and answers 404 `PRODUCT_NOT_FOUND` with the missing ids in `details` if any do not exist. Otherwise it returns `{ compatible, issues, items }`.
@@ -134,7 +136,7 @@ The limit is tight on purpose, because every request can call a paid AI API.
 
 ## Behaviour seen in testing
 
-- A real Gemini build was produced and accepted once.
+- Earlier in development a real Gemini build was produced and accepted once. On the deployed Render API one call returned `source: gemini`, `model: gemini-3.1-flash-lite`, 6 items and a total of ₱52,380 for a ₱60,000 gaming budget. That is one successful call, not a guarantee. Before the Gemini variables were added on Render, the fallback answered instead (total ₱48,125).
 - Google's models were often overloaded during testing. `gemini-3.5-flash` took between about 11 and 55 seconds, and `gemini-3.1-flash-lite` often returned a 503 within about 1.5 seconds. In those cases the fallback answered, for example about ₱48,125 of parts for a ₱60,000 gaming budget. The timeout is 20 seconds locally, with the fast model first.
 - `gemini-2.5-flash` returns 404 ("no longer available to new users") and is not used.
 

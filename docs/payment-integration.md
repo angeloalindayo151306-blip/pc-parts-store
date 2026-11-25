@@ -103,19 +103,29 @@ The webhook is protected by a **secret token in the URL** (`MAYA_WEBHOOK_TOKEN`)
 
 The route is registered before `express.json` and uses `express.raw`, so the body arrives untouched (limit 100 kb).
 
+### Registration, signatures and stored data
+
+- **Maya signs its webhooks** (RSA-SHA256, headers `X-Maya-Webhook-Signature` and `X-Maya-Webhook-Timestamp`) and publishes the IP addresses it sends from. This API checks neither. It relies on the secret token and on never trusting the body. This is read from Maya's webhook security page; the sample code on that page was not read.
+- **Maya webhooks are registered by an API call** (`POST /payments/v1/webhooks` with the secret key, a `name` and a `callbackUrl`), not in a dashboard form.
+- **Not registered, on purpose.** Listing the webhooks with our sandbox secret key returned four hooks (`PAYMENT_SUCCESS`, `PAYMENT_FAILED`, `PAYMENT_EXPIRED`, `PAYMENT_CANCELLED`) that point to a domain that is not ours. The likely explanation, not proven, is that the sandbox keys are shared test keys. If so, anyone using those keys could list our webhook and read the secret token in its URL, so the token would protect nothing. Nothing was registered, changed or deleted.
+- **Stored data.** `webhook_events` stores the whole body as JSON. A real Maya body can include buyer contact and address details, as the documentation sample does.
+- **The payload shape comes from documentation.** One checkout-style sample was seen (`id`, `requestReferenceNumber`, `status`, `paymentStatus` and more). It had no event name on it, and the samples of the other three checkout events were not seen. `verifyWebhook` therefore needs only an `id`. Status and amount always come from Maya's own answer. The documentation sample puts the total at `totalAmount.value`, while the live API answered with `totalAmount.amount`, so the sample is not treated as proof.
+
 ### Handling
 
 | Step | Result |
 |---|---|
 | Token wrong | 401 `WEBHOOK_UNAUTHORIZED` |
 | Body is not JSON | 400 `INVALID_JSON` |
-| Event has no `id` and `paymentStatus` | 200 `{ received: true, ignored: true }`. A 2xx stops the gateway from retrying an event we do not use. |
+| Event the provider does not understand (for Maya: no `id`) | 200 `{ received: true, ignored: true }`. A 2xx stops the gateway from retrying an event we do not use. |
 | Event already stored | 200 `{ received: true, duplicate: true }`. No second processing. |
 | New event | Stored in `webhook_events`, answered with 200 at once, then settled in the background (`setImmediate`). The row is marked processed when settlement finishes. |
 
-The event key is `{id}:{paymentStatus}`, and `(provider, event_key)` is unique in the database, so a repeated delivery of the same event is stored once.
+The event key is `{id}:{eventType}`. For Maya, `eventType` is `paymentStatus` if the body has one, otherwise `status`, otherwise `UNKNOWN`. `(provider, event_key)` is unique in the database, so a repeated delivery of the same event is stored once.
 
-If background settlement throws, the error is logged and the event stays unprocessed. A retry of that same event would be treated as a duplicate, so it would not run again. That is acceptable because the customer's return to the site, or a later `reconcile`, settles the payment through the same code. This is exactly the missed-webhook path.
+If background settlement throws, the error is logged and the event stays unprocessed. A retry of that same event is then accepted and settled again, because only events already marked processed count as duplicates (`recordWebhookEvent`). The customer's return to the site, or a later `reconcile`, also settles the payment through the same code.
+
+One limit, read from the code and not seen in practice: if settlement finishes normally but Maya still reports the payment as pending, the result is `still_pending`, the event is marked processed, and a later retry of the same event is treated as a duplicate. In that case only the customer's return (reconcile) would settle it.
 
 ## Settlement: what a payment result does to an order
 
@@ -175,9 +185,9 @@ Each order is then locked and re-checked inside a transaction. If a retry took a
 | `MAYA_BASE_URL` | Maya API base URL. The sandbox is `https://pg-sandbox.paymaya.com`. |
 | `API_PUBLIC_URL` | This API's public base URL. It is read into `env.js` as `apiPublicUrl` (default `http://localhost:<port>`), but no code uses it yet. |
 
-No key is ever sent to the browser, and no key is in the repository (`.env` is ignored, and `.env.example` holds placeholders only).
+No key is ever sent to the browser, and no key is in the repository (`.env` is ignored, and `.env.example` holds placeholders only). On Render the same variables are set in the service's Environment tab, and the hosted API runs with `PAYMENT_PROVIDER=maya`.
 
-The webhook URL to register in the Maya sandbox is:
+The webhook URL that would be registered, if registration were done (it is not, see "Registration, signatures and stored data"), is:
 
 `https://pc-parts-api-kik5.onrender.com/api/v1/webhooks/maya/<MAYA_WEBHOOK_TOKEN>`
 
@@ -198,6 +208,15 @@ The webhook URL to register in the Maya sandbox is:
 3. For the closed path, press **Pay now** on another order and cancel on Maya's page. The order stays `pending_payment` with the stock released, and **Pay again** appears.
 4. Open the flagged order `#5B395A8C` to show the review state and its reason.
 
+### Checked on the deployed API
+
+On the Render API (`https://pc-parts-api-kik5.onrender.com`), with `PAYMENT_PROVIDER=maya` and the Maya sandbox keys set there:
+
+- Start payment returned `provider: maya`, a checkout host of `payments-web-sandbox.maya.ph` and `reused: false`.
+- The Newman run passed, but its Payments folder only asserts that `checkoutUrl` is an http(s) string and `provider` is a string. The provider and host above were read from the saved Newman report, not from an assertion.
+
+Not checked on Render: a completed payment, the return to the frontend (`FRONTEND_URL` on Render is still the local address until the frontend is deployed), and any real webhook delivery.
+
 ### Automated
 
 | Check | What it proves |
@@ -212,7 +231,9 @@ The `scripts/` checks assert `PAYMENT_PROVIDER=mock`. Run them with the mock con
 
 ## Known limitations
 
-- **The Maya webhook is not registered yet.** Until it is, every real payment settles through the reconcile path. `verifyWebhook` reads `id` and `paymentStatus` from the body, and this has not yet been checked against a payload sent by Maya itself.
+- **The Maya webhook is not registered.** Every real payment settles through the reconcile path. The reason is under "Registration, signatures and stored data". A real Maya delivery has therefore never been received, and `verifyWebhook` has not been checked against one.
+- **Webhook signatures and Maya's IP list are not checked.** Only the secret token protects the URL, and that token may not stay secret if the sandbox keys are shared (not proven).
+- **A retry can be dropped** after a `still_pending` settlement, as described under Handling.
 - **A checkout that expires at Maya** with no useful `paymentStatus` stays `pending` in our mapping, so the payment row is not marked `expired` straight away. The order is closed by the expiry sweep once its hold lapses, and that step (`releaseHold`) also marks the still-pending payment `expired` and gives the stock back, so nothing stays stuck.
 - **Failed and cancelled both map to `failed`** in the `payments` table, because its status check does not allow `cancelled`.
 - **No refunds.** A flagged payment needs a manual decision outside the app.

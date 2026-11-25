@@ -14,12 +14,13 @@ The checks were made by reading the code and running searches over the source. T
 |---|---|---|
 | No env or local-secret file is tracked in git | Pass | `git ls-files` matched no `.env`, `.env.local` or `environment.local` file. `postman/environment.local.json` is git-ignored. |
 | `backend/.env.example` exists | Pass | Found by `ls`. |
-| `frontend/.env.example` exists | Open | The file is missing. It is needed for the public repo. |
+| `frontend/.env.example` exists | Pass | Added in commit `90d8926`. It holds only a commented `VITE_API_URL` example. |
 | No secret names appear in the frontend source | Pass | A case-insensitive search for `MAYA_`, `GEMINI`, `SECRET_KEY` and `JWT_SECRET` matched only the display word "gemini" in `AiAssistant.jsx` and the `source` value in `api/ai.js`. The only build variables read are `VITE_API_URL` and `DEV`. |
 | No secret appears in the built frontend bundle | Not checked | Only the source was searched, not the `dist` output. |
 | SQL values are passed as `$n` parameters | Pass | The three repositories with dynamic SQL (`product`, `admin.product`, `review`) were read in full: sort keys come from a whitelist, column lists are constants or a fixed field map, and every value is a parameter. A search for `${` across the other repositories and the four services that run SQL found only a lock key passed as a parameter and an error message. The search does not catch string concatenation with `+`. |
 | An unexpected error does not leak details | Pass | `errorHandler.js` sends only `INTERNAL_ERROR` and "Something went wrong" for an unknown error, and logs the real one on the server. |
 | The webhook token is compared in constant time and the webhook is closed when no token is set | Pass | Read in `webhook.controller.js`. It hashes both values and uses `timingSafeEqual`. |
+| Maya webhook signatures and source IPs are verified | Open | Not implemented. The webhook relies on the secret token in the URL and never trusts the body. Maya signs its webhooks (RSA-SHA256), which this API does not check. |
 | The mock payment provider is refused in production | Pass | Read in `paymentFactory.js`. |
 | AI output is validated before it is shown | Pass | Read in `ai.service.js`. JSON, schema, real product ids, no duplicates, budget and compatibility are all checked. |
 | The AI endpoint is rate limited | Pass | Read in `ai.routes.js`. 10 requests per 15 minutes per IP. |
@@ -48,9 +49,9 @@ The checks were made by reading the code and running searches over the source. T
 | The Jest suite passes | Not checked | It was not re-run for this review. The last recorded result is 4 suites and 28 tests. |
 | The Postman collection passes | Not checked | Not re-run for this review. The last recorded run was 64 requests and 224 assertions with 0 failures. |
 | Reviews and the compatibility endpoint have Jest tests | Open | They are covered by Postman and `reviews-check.js` only. |
-| The live Gemini path is tested automatically | Open | Jest runs with the key blank, so only the fallback is tested. |
+| The live Gemini path is tested automatically | Open | Jest runs with the key blank, so only the fallback is tested. One live call was seen working on Render by hand. |
 | Failed-card and 3-D Secure payments were tried against Maya | Open | Not run. Only a successful card payment was done. |
-| The Maya webhook is registered and has received a real delivery | Open | It is not registered in the Maya dashboard yet, so the webhook path has only been tested with the mock provider. |
+| The Maya webhook is registered and has received a real delivery | Open | Not registered, on purpose. Listing webhooks with the sandbox secret key showed hooks that are not ours, so the keys appear to be shared (inferred, not proven) and a secret token in a webhook URL would not stay secret. The webhook path has been tested only with the mock provider. |
 
 ## Documentation and delivery
 
@@ -69,8 +70,8 @@ The checks were made by reading the code and running searches over the source. T
 
 ## Next actions
 
-1. Add `frontend/.env.example`.
+1. `frontend/.env.example` is added (done).
 2. Fix or consciously accept the 13 frontend lint problems.
 3. Decide whether the AI endpoint should require a login.
-4. Register the Maya webhook and test a real delivery.
+4. Webhook: not registered (see the table). Revisit only with sandbox keys that belong to this project alone.
 5. Confirm that the diagrams render, and run Lighthouse after deploy.

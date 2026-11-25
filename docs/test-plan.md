@@ -99,10 +99,12 @@ Last recorded Newman run, against the local server with `PAYMENT_PROVIDER=maya`:
 
 The run confirmed, among other things, that `?sort=bogus` gives 422 and that the admin product shows `is_active`.
 
+Newman was also run against the deployed Render API (`--env-var "baseUrl=https://pc-parts-api-kik5.onrender.com/api/v1"`): **64 requests, 224 assertions executed, 0 failed.** The Payments folder only asserts that `checkoutUrl` is an http(s) string and `provider` is a string, so it does not prove Maya by itself. The saved report showed `provider` `maya` and the host `payments-web-sandbox.maya.ph`.
+
 Notes for running it:
 
 - Local rate limiters are on. One run uses about 7 auth and 3 AI calls (limits: 20 and 10 per 15 minutes), so do not run it more than once or twice in a row.
-- It leaves test data in the database: a `postman-...@example.com` user, a cancelled order, and a soft-deleted "Postman Test Part".
+- It leaves test data in the database: a `postman-...@example.com` user, a cancelled order, and a soft-deleted "Postman Test Part". The local server and Render use the same Supabase database, so a run against Render adds the same rows.
 - If every request fails at once, the server is not running. The first Newman run failed this way (224 failures, all connection refused) before the server was restarted.
 
 ## Scenario scripts
@@ -147,7 +149,7 @@ I have not re-read `pay-test.js`, `payment-smoke.js` or `webhook-test.js` for th
 - The Jest AI tests run with the key blank, so they cover only the fallback. The live Gemini path was seen working once by hand, and the case of live Gemini returning an incompatible build has not been seen.
 - Jest does not cover the 422 `BUDGET_TOO_LOW` path of the AI endpoint.
 - Jest has no tests for reviews or the compatibility endpoint on their own. Those are covered by Postman and `reviews-check.js`.
-- The Jest webhook tests cover authentication only. Webhook processing is covered by `webhook-test.js` with the mock provider. The webhook is not registered in the Maya dashboard, so a real Maya webhook delivery has not been tested.
+- The Jest webhook tests cover authentication only. Webhook processing is covered by `webhook-test.js` with the mock provider. `MayaProvider.verifyWebhook` was changed to need only an `id`; it was checked once by a one-off command with five inputs and dummy keys, and that check is not saved as a test. The webhook is not registered with Maya (see `docs/payment-integration.md`), so a real Maya delivery has not been tested.
 - The failed-card and 3-D Secure paths have not been run against Maya.
 - Lighthouse has not been run yet, because the frontend is not deployed.
 - The Jest tests share the one real database with the app, so they leave no isolation between test data and real data except by the names and emails they use.
