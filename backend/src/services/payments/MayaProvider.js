@@ -35,9 +35,7 @@ export class MayaProvider extends PaymentProvider {
     ) {
       throw new AppError(500, 'PAYMENT_AMOUNT_MISMATCH', 'Order totals are inconsistent');
     }
-
     const [firstName, ...rest] = (input.buyer.name || 'Customer').trim().split(/\s+/);
-
     return {
       totalAmount: {
         value: toPesos(amountCentavos),
@@ -95,13 +93,20 @@ export class MayaProvider extends PaymentProvider {
     };
   }
 
+  /**
+   * The webhook body is only used to find which checkout to look at. Settlement
+   * then asks Maya for the real status and amount, so nothing here is trusted
+   * for money. Needs an id; the event type is paymentStatus, then status, then
+   * 'UNKNOWN'. Anything without an id is ignored.
+   */
   verifyWebhook(payload) {
-    if (!payload || typeof payload !== 'object' || !payload.id || !payload.paymentStatus) {
+    if (!payload || typeof payload !== 'object' || !payload.id) {
       return null; // unknown event: ignore
     }
+    const eventType = String(payload.paymentStatus || payload.status || 'UNKNOWN');
     return {
-      eventKey: `${payload.id}:${payload.paymentStatus}`,
-      eventType: String(payload.paymentStatus),
+      eventKey: `${payload.id}:${eventType}`,
+      eventType,
       sessionId: String(payload.id),
     };
   }
