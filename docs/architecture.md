@@ -75,8 +75,9 @@ flowchart TD
 
 Rules that follow from this:
 
-- A controller never calls a repository, and a repository never calls a service. Dependencies point one way: routes, controllers, services, repositories.
-- Money and stock rules live only in services. The client sends no amounts, and every price comes from the database.
+- Repositories never call services. Controllers call services, with two exceptions: `auth.controller.js` reads users through `user.repository.js`, and `webhook.controller.js` records the webhook event through `payment.repository.js`.
+- Most SQL is in repositories. A few services run their own queries inside a transaction, because the query is part of the rule: `orderWorkflow.js`, `orderLifecycle.service.js` (the expiry sweep), `coupon.service.js` and `health.service.js`.
+- Pricing and coupon rules live in services (`pricing.js`, `coupon.service.js`). The client sends no amounts, and every price comes from the database. The atomic stock check (`WHERE stock >= $1`) is a SQL statement in `order.repository.js`, called by the order service.
 - Errors are thrown as `AppError(status, code, message, details)` and turned into `{ success: false, error: { code, message, details }, requestId }` in one place.
 
 ### Where the larger features live
@@ -121,7 +122,7 @@ Routing uses `react-router`. `ProtectedRoute` sends signed-in-only pages (cart, 
 | Security headers | Helmet, applied globally in `app.js` |
 | CORS allowlist, no wildcard | `app.js` |
 | Rate limits on auth, AI, compatibility and review writes | `routes/*.routes.js` |
-| Parameterised SQL only | `repositories/` |
+| Values are passed as `$n` parameters. Dynamic SQL is limited to whitelisted sort keys and fixed fragments | `repositories/`, and the few services that run SQL |
 | Webhook protected by a secret token in the URL, and the body is never trusted (the payment is re-fetched from Maya) | `webhook.routes.js`, `paymentSettlement.service.js` |
 | Prompt-injection resistance: notes are untrusted data, and every product id Gemini returns is checked against the database | `ai.service.js` |
 | Secrets only in environment variables, loaded once into a frozen object | `config/env.js` |

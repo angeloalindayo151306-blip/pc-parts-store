@@ -64,7 +64,7 @@ classDiagram
 | Unit of work | `utils/transaction.js` (`withTransaction`) | A group of database changes succeeds or fails as one. |
 | Middleware chain | `middleware/` and `routes/` | Each request passes through small, single-purpose steps. |
 | Higher-order function | `asyncHandler`, `validate`, `requireRole` | Reusable behaviour wrapped around handlers. |
-| Repository | `repositories/` | SQL stays out of services and controllers. |
+| Repository | `repositories/` | Most SQL lives in repository functions, not in controllers. Services call them. |
 
 ## Strategy: interchangeable payment providers
 
@@ -120,7 +120,7 @@ The details are in `docs/payment-integration.md`.
 - `assertTransition(from, to)` throws `AppError` 409 `ILLEGAL_TRANSITION` with `{ from, to }`.
 - `transition(client, order, to, { actorId, note })` checks the move, updates the status and writes an `order_status_history` row. `actorId = null` means the system did it, for example the expiry sweep.
 
-Every status change goes through this one function, so the history is complete and no code path can skip the rules. Adding a status means editing one table.
+`transition` is the only place in the backend that updates `orders.status` (a search for `SET status` finds only this one write on `orders`), so the history is complete and no code path skips the rules. Adding a status means editing one table.
 
 `lockOrder` takes `SELECT ... FOR UPDATE` on the order row, so two actions on the same order (a cancel and a webhook, say) run one after the other.
 
@@ -142,7 +142,7 @@ Three of them are higher-order functions, meaning a function that takes or retur
 
 ## Repository layer
 
-Database access sits in `repositories/`, and services call those functions instead of writing SQL. For example `order.repository.js` has `reserveStock`, `insertOrder`, `insertItem`, `insertReservation`, `insertHistory` and `findOrder`. `reserveStock` is one atomic `UPDATE ... WHERE stock >= $1 AND is_active = true`, which is what stops two buyers taking the last unit. The layer rules are in `docs/architecture.md`.
+Most database access sits in `repositories/`, and services call those functions. A few services run their own queries, because the query is part of the rule: `orderWorkflow.js` (row locks, status change, releasing stock), `orderLifecycle.service.js` (the expiry sweep), `coupon.service.js` (locking the coupon row) and `health.service.js` (`select 1`). Two controllers also call a repository directly: `auth.controller.js` and `webhook.controller.js`. For example `order.repository.js` has `reserveStock`, `insertOrder`, `insertItem`, `insertReservation`, `insertHistory` and `findOrder`. `reserveStock` is one atomic `UPDATE ... WHERE stock >= $1 AND is_active = true`, which is what stops two buyers taking the last unit. The layer rules are in `docs/architecture.md`.
 
 ## OOP techniques
 
