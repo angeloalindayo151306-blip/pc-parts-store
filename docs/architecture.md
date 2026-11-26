@@ -8,7 +8,7 @@ PC Parts Store is a React PWA (the customer-facing app) backed by a layered Node
 flowchart LR
     user["Customer or admin<br/>phone or desktop browser"]
 
-    subgraph front["Frontend: React + Vite PWA (Netlify, planned)"]
+    subgraph front["Frontend: React + Vite PWA (Netlify)"]
         ui["Pages, components, contexts"]
         sw["Service worker<br/>vite-plugin-pwa"]
     end
@@ -150,7 +150,7 @@ Every response uses the same envelope. Each request gets an id (`middleware/requ
 |---|---|---|
 | API | Render web service, root directory `backend` | Deploys on every push to `main`. Health check at `/api/v1/health`. The free instance sleeps when idle. `trust proxy` is set because Render sits behind a proxy. |
 | Database | Supabase PostgreSQL | Connected through the pooler. |
-| Frontend | Netlify | Planned. Not deployed yet. |
+| Frontend | Netlify | Deployed at https://pc-store-parts.netlify.app, built from the `main` branch of the repository. |
 | Payments | Maya sandbox | Test cards only. No real money. The webhook is not registered, so payments settle through reconcile. |
 | AI | Google Gemini | Key held only on the server. If Gemini fails, a keyword fallback answers. |
 

@@ -215,7 +215,9 @@ On the Render API (`https://pc-parts-api-kik5.onrender.com`), with `PAYMENT_PROV
 - Start payment returned `provider: maya`, a checkout host of `payments-web-sandbox.maya.ph` and `reused: false`.
 - The Newman run passed, but its Payments folder only asserts that `checkoutUrl` is an http(s) string and `provider` is a string. The provider and host above were read from the saved Newman report, not from an assertion.
 
-Not checked on Render: a completed payment, the return to the frontend (`FRONTEND_URL` on Render is still the local address until the frontend is deployed), and any real webhook delivery.
+Checked on the live site (Nov 26): a full payment made from the deployed Netlify frontend with the Maya sandbox test Visa card. `FRONTEND_URL` and `CORS_ORIGINS` on Render are set to `https://pc-store-parts.netlify.app`. Maya's page showed 'Payment Successful', then redirected to `/payment/success?order=...` on the Netlify site. Order #549691BC (one item, subtotal 1,950.00 plus 150.00 shipping, total 2,100.00 PHP) showed Paid. Its status history reads 'Pending payment → Paid' with the note 'Payment confirmed by maya (reconcile)'. No webhook is registered, so reconcile settled the payment.
+
+Not checked on Render: any real webhook delivery, a failed card, and the 3DS flow.
 
 ### Automated
 

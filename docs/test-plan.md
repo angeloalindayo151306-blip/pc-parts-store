@@ -124,6 +124,7 @@ I have not re-read `pay-test.js`, `payment-smoke.js` or `webhook-test.js` for th
 ## Manual checks
 
 - **Real Maya sandbox payment.** Order `#19265337` (PHP 9,145.00) was paid with the sandbox card and settled by the reconcile path with no webhook. This is the real-gateway evidence. The steps are in `docs/payment-integration.md`.
+- **Live payment from the deployed site.** On Nov 26 a full payment was made from the Netlify frontend against the Render API with the Maya sandbox test card. Order `#549691BC` (PHP 2,100.00: one item at 1,950.00 plus 150.00 shipping) showed Paid after Maya redirected back to the Netlify site. Its status history reads 'Pending payment to Paid' with the note 'Payment confirmed by maya (reconcile)'. No webhook is registered, so reconcile settled it. This was seen in screenshots from one run by hand and is not an automated test. The live site has not yet been checked for a failed card, 3-D Secure, a real webhook delivery, or offline use.
 - **Amount-reading bug.** The first real payment showed "Payment under review" because the amount was read from the wrong field. It was fixed, and order `#5B395A8C` stays `payment_flagged` as a demo of that path.
 - **Offline and install (PWA).** Tested only on the production preview (port 4173), never on the dev server.
 - **Swagger UI.** `/api-docs` renders on Render. The "Try it out" button with Authorize has not been rehearsed in a browser yet.
@@ -151,7 +152,7 @@ I have not re-read `pay-test.js`, `payment-smoke.js` or `webhook-test.js` for th
 - Jest has no tests for reviews or the compatibility endpoint on their own. Those are covered by Postman and `reviews-check.js`.
 - The Jest webhook tests cover authentication only. Webhook processing is covered by `webhook-test.js` with the mock provider. `MayaProvider.verifyWebhook` was changed to need only an `id`; it was checked once by a one-off command with five inputs and dummy keys, and that check is not saved as a test. The webhook is not registered with Maya (see `docs/payment-integration.md`), so a real Maya delivery has not been tested.
 - The failed-card and 3-D Secure paths have not been run against Maya.
-- Lighthouse has not been run yet, because the frontend is not deployed.
+- Lighthouse has not been run yet. The frontend is deployed now, so it can be run against the live site.
 - The Jest tests share the one real database with the app, so they leave no isolation between test data and real data except by the names and emails they use.
 
 ## Dependency audit record
