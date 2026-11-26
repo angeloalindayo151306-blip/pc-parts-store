@@ -59,8 +59,8 @@ The checks were made by reading the code and running searches over the source. T
 |---|---|---|
 | The Mermaid diagrams render on GitHub | Pass | All five showed as pictures in the GitHub preview, seen in the author's browser screenshots: `architecture.md`, `database.md`, `payment-integration.md`, `design-patterns-oop.md` and `ai-integration.md`. For four of them only the top part of the diagram was visible, so the lower parts were not checked. |
 | Swagger UI "Try it out" works with Authorize | Not checked | The page renders on Render. The Authorize flow has not been tried in a browser. |
-| Lighthouse targets are met | Not checked | The frontend is deployed on Netlify, but Lighthouse has not been run yet. |
-| Accessibility was reviewed | Not checked | No review has been done. |
+| Lighthouse targets are met | Open | Run on the live site on Nov 26. Accessibility 100, Best Practices 100 and SEO 91 meet their targets. Performance was 71 and 74 in the two clean runs, 1 point under the target of 75 on the better one. Details are in `docs/test-plan.md`. |
+| Accessibility was reviewed | Not checked | Lighthouse's automated accessibility audit scored 100 in four runs. No manual review has been done. |
 
 ## Known limits of this review
 
@@ -74,4 +74,4 @@ The checks were made by reading the code and running searches over the source. T
 2. Fix or consciously accept the 13 frontend lint problems.
 3. Decide whether the AI endpoint should require a login.
 4. Webhook: not registered (see the table). Revisit only with sandbox keys that belong to this project alone.
-5. Run Lighthouse on the deployed site. (The diagrams are confirmed to render and the frontend is deployed.)
+5. Lighthouse was run on the deployed site. Performance is 1 point under target in the better clean run, so one more attempt is optional.
