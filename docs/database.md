@@ -4,6 +4,8 @@ PostgreSQL on Supabase. 17 tables in the `public` schema. This document was writ
 
 To print the schema again: `cd backend && node --env-file=.env scripts/dump-schema.js`.
 
+Limit: the repository does not hold a script that creates the whole schema. `backend/db/migrations` has only `002_payments_checkout_url.sql` and `003_product_reviews.sql`. The first tables were created outside the repository, and `dump-schema.js` prints a compact description, not runnable SQL. A fresh database cannot be rebuilt from the repository alone.
+
 ## Entity relationship diagram
 
 Only key columns are shown. The full column list is in the table dictionary below.

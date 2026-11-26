@@ -47,7 +47,11 @@ cd backend
 npm install
 ```
 
-Create `backend/.env` from `backend/.env.example` and fill in the values (see the table below). Then apply the migrations in `backend/db/migrations` with `node --env-file=.env scripts/run-migration.js <path-to-migration-file>`, seed the data with `npm run seed`, and start the API:
+Create `backend/.env` from `backend/.env.example` and fill in the values (see the table below).
+
+**The repository does not contain the full database schema.** `backend/db/migrations` holds only `002_payments_checkout_url.sql` and `003_product_reviews.sql`. The first tables were created outside this repository and were never saved as a file, so a fresh database cannot be built from the repository alone. `docs/database.md` describes all 17 tables as they exist in the live database.
+
+With a Postgres database that already has the tables, seed the data with `npm run seed` and start the API:
 
 ```bash
 npm run dev
